@@ -110,10 +110,7 @@ class _AddFoodScreenState extends State<AddFoodScreen>
           _buildAnalyzeButton(),
           if (_aiResponse != null) ...[
             const SizedBox(height: 24),
-            Container(
-              key: _analysisResultsKey,
-              child: _buildAiResults(),
-            ),
+            Container(key: _analysisResultsKey, child: _buildAiResults()),
           ],
         ],
       ),
@@ -136,10 +133,7 @@ class _AddFoodScreenState extends State<AddFoodScreen>
           _buildAnalyzeButton(),
           if (_aiResponse != null) ...[
             const SizedBox(height: 24),
-            Container(
-              key: _analysisResultsKey,
-              child: _buildAiResults(),
-            ),
+            Container(key: _analysisResultsKey, child: _buildAiResults()),
           ],
         ],
       ),

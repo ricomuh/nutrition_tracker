@@ -74,11 +74,7 @@ class EntryDetailScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.broken_image,
-                      color: Colors.grey,
-                      size: 48,
-                    ),
+                    Icon(Icons.broken_image, color: Colors.grey, size: 48),
                     SizedBox(height: 8),
                     Text(
                       'Image not available',
@@ -182,7 +178,7 @@ class EntryDetailScreen extends StatelessWidget {
                 Colors.orange,
               ),
               _buildNutritionItem(
-                'Fat', 
+                'Fat',
                 '${entry.fat.toStringAsFixed(1)} g',
                 Colors.purple,
               ),
@@ -214,9 +210,9 @@ class EntryDetailScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            label, 
+            label,
             style: TextStyle(
-              fontSize: 12, 
+              fontSize: 12,
               color: (color ?? Colors.blue).withOpacity(0.8),
               fontWeight: FontWeight.w500,
             ),
@@ -225,7 +221,7 @@ class EntryDetailScreen extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 14, 
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: color ?? Colors.blue,
             ),
@@ -410,17 +406,17 @@ class EntryDetailScreen extends StatelessWidget {
 
   bool _shouldShowImage() {
     if (entry.imagePath == null) return false;
-    
+
     try {
       // Check if file exists
       final file = File(entry.imagePath!);
       if (!file.existsSync()) return false;
-      
+
       // Show image only for today and last 3 days
       final now = DateTime.now();
       final entryDate = entry.date;
       final difference = now.difference(entryDate).inDays;
-      
+
       return difference <= 3;
     } catch (e) {
       return false;
