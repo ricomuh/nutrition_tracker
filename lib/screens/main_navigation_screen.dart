@@ -15,6 +15,8 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
   DateTime _selectedDate = DateTime.now();
+  Key _monthlyStatsKey = UniqueKey();
+  Key _homeKey = UniqueKey();
 
   void _onTabTapped(int index) {
     setState(() {
@@ -28,6 +30,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     });
   }
 
+  void _onFoodSaved() {
+    // Navigate to home tab after successful food entry
+    setState(() {
+      _currentIndex = 0;
+      // Force rebuild of both home and monthly stats
+      _monthlyStatsKey = UniqueKey();
+      _homeKey = UniqueKey();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,11 +47,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         index: _currentIndex,
         children: [
           HomeScreen(
+            key: _homeKey,
             selectedDate: _selectedDate,
             onDateChanged: _onDateChanged,
           ),
-          AddFoodScreen(selectedDate: _selectedDate),
-          const MonthlyStatsScreen(),
+          AddFoodScreen(
+            selectedDate: _selectedDate,
+            onSaveSuccess: _onFoodSaved,
+          ),
+          MonthlyStatsScreen(key: _monthlyStatsKey),
           const ProfileScreen(),
         ],
       ),

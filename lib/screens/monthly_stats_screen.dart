@@ -6,7 +6,9 @@ import '../services/database_service.dart';
 import '../widgets/chart_widgets.dart';
 
 class MonthlyStatsScreen extends StatefulWidget {
-  const MonthlyStatsScreen({super.key});
+  final VoidCallback? onRefresh;
+
+  const MonthlyStatsScreen({super.key, this.onRefresh});
 
   @override
   State<MonthlyStatsScreen> createState() => _MonthlyStatsScreenState();
@@ -22,6 +24,13 @@ class _MonthlyStatsScreenState extends State<MonthlyStatsScreen> {
   void initState() {
     super.initState();
     _loadMonthlyData();
+  }
+
+  // Public method to refresh data from outside
+  void refreshData() {
+    if (mounted) {
+      _loadMonthlyData();
+    }
   }
 
   Future<void> _loadMonthlyData() async {

@@ -16,11 +16,13 @@ import '../widgets/custom_button.dart';
 class AddFoodScreen extends StatefulWidget {
   final DateTime selectedDate;
   final MealType? selectedMealType;
+  final VoidCallback? onSaveSuccess;
 
   const AddFoodScreen({
     super.key,
     required this.selectedDate,
     this.selectedMealType,
+    this.onSaveSuccess,
   });
 
   @override
@@ -916,6 +918,11 @@ class _AddFoodScreenState extends State<AddFoodScreen>
       _selectedMealType = null;
       _selectedImage = null;
       _selectedImageBytes = null;
+
+      // Navigate back to home tab
+      if (widget.onSaveSuccess != null) {
+        widget.onSaveSuccess!();
+      }
     } catch (e) {
       _showErrorMessage('Error recalculating nutrition: $e');
     } finally {
@@ -985,7 +992,7 @@ class _AddFoodScreenState extends State<AddFoodScreen>
       await nutritionProvider.addEntry(entry);
 
       if (mounted) {
-        // Don't use Navigator.pop() in tab navigation, instead clear the form
+        // Clear the form
         _resetAnalysis();
         _selectedMealType = null;
         _selectedImage = null;
@@ -995,6 +1002,11 @@ class _AddFoodScreenState extends State<AddFoodScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Food entry saved successfully!')),
         );
+
+        // Navigate back to home tab
+        if (widget.onSaveSuccess != null) {
+          widget.onSaveSuccess!();
+        }
       }
     } catch (e) {
       _showErrorMessage('Error saving entry: $e');
