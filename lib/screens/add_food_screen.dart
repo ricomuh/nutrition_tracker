@@ -915,9 +915,9 @@ class _AddFoodScreenState extends State<AddFoodScreen>
       // Show success message and reset form instead of popping
       _showSuccessMessage('Recalculated entry saved successfully!');
       _resetAnalysis();
-      _selectedMealType = null;
       _selectedImage = null;
       _selectedImageBytes = null;
+      // Don't reset _selectedMealType so user can add more food to same meal
 
       // Navigate back to home tab
       if (widget.onSaveSuccess != null) {
@@ -992,12 +992,12 @@ class _AddFoodScreenState extends State<AddFoodScreen>
       await nutritionProvider.addEntry(entry);
 
       if (mounted) {
-        // Clear the form
+        // Clear the form but keep meal type selected
         _resetAnalysis();
-        _selectedMealType = null;
         _selectedImage = null;
         _selectedImageBytes = null;
         _aiResponse = null;
+        // Don't reset _selectedMealType so user can add more food to same meal
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Food entry saved successfully!')),

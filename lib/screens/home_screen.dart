@@ -20,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late DateTime _selectedDate;
+  bool _isDateChanging = false;
 
   @override
   void initState() {
@@ -33,13 +34,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didUpdateWidget(HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.selectedDate != oldWidget.selectedDate) {
-      _selectedDate = widget.selectedDate ?? DateTime.now();
-      _loadData();
+    if (widget.selectedDate != null &&
+        widget.selectedDate != oldWidget.selectedDate) {
+      final newDate = widget.selectedDate!;
+      if (newDate != _selectedDate) {
+        _selectedDate = newDate;
+        _loadData();
+      }
     }
   }
 
   Future<void> _loadData() async {
+    setState(() {
+      _isDateChanging = true;
+    });
+
     try {
       final nutritionProvider = context.read<NutritionProvider>();
       await nutritionProvider.loadEntriesForDate(_selectedDate);
@@ -52,6 +61,12 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDateChanging = false;
+        });
       }
     }
   }
@@ -108,19 +123,37 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: () => _changeDate(-1),
-            icon: const Icon(Icons.chevron_left),
+            onPressed: _isDateChanging ? null : () => _changeDate(-1),
+            icon: _isDateChanging
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.chevron_left),
           ),
           TextButton(
-            onPressed: () => _selectDate(),
+            onPressed: _isDateChanging ? null : () => _selectDate(),
             child: Text(
               _formatDate(_selectedDate),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _isDateChanging ? Colors.grey : null,
+              ),
             ),
           ),
           IconButton(
-            onPressed: _isToday() ? null : () => _changeDate(1),
-            icon: const Icon(Icons.chevron_right),
+            onPressed: (_isToday() || _isDateChanging)
+                ? null
+                : () => _changeDate(1),
+            icon: _isDateChanging
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.chevron_right),
           ),
         ],
       ),
@@ -177,13 +210,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return selectedDay == today;
   }
 
-  void _changeDate(int days) {
+  void _changeDate(int days) async {
     final newDate = _selectedDate.add(Duration(days: days));
     setState(() {
       _selectedDate = newDate;
     });
+    // Notify parent and load data
     widget.onDateChanged?.call(newDate);
-    _loadData();
+    await _loadData();
   }
 
   Future<void> _selectDate() async {
