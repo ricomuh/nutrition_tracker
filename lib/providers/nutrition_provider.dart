@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/nutrition_entry.dart';
+import '../models/user_profile.dart';
 import '../services/database_service.dart';
 
 class NutritionProvider extends ChangeNotifier {
@@ -93,5 +94,28 @@ class NutritionProvider extends ChangeNotifier {
 
   List<NutritionEntry> getEntriesByMealType(MealType mealType) {
     return _entries.where((entry) => entry.mealType == mealType).toList();
+  }
+
+  List<NutritionEntry> getEntriesForDate(DateTime date) {
+    // If the date is the currently selected date, return current entries
+    if (date.year == _selectedDate.year &&
+        date.month == _selectedDate.month &&
+        date.day == _selectedDate.day) {
+      return _entries;
+    }
+
+    // Otherwise load entries synchronously (this is a simplified approach)
+    // In a real app, you might want to cache entries for multiple dates
+    return [];
+  }
+
+  double calculateDailyTarget(UserProfile userProfile) {
+    // Calculate target calories based on TDEE and goal
+    double targetCalories = userProfile.tdee;
+
+    // Apply calorie adjustment based on goal
+    targetCalories += userProfile.calorieAdjustment;
+
+    return targetCalories;
   }
 }

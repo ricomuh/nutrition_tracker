@@ -255,13 +255,12 @@ class EntryDetailScreen extends StatelessWidget {
   }
 
   Widget _buildFoodItemCard(FoodItem item) {
-    // Estimate nutrition per item (simplified calculation)
-    final totalItems = entry.items.length;
-    final estimatedCalories = entry.calories / totalItems;
-    final estimatedProtein = entry.protein / totalItems;
-    final estimatedCarbs = entry.carbohydrates / totalItems;
-    final estimatedFat = entry.fat / totalItems;
-    final estimatedFiber = entry.fiber / totalItems;
+    // Use actual nutrition data per item
+    final calories = item.nutritions.calories;
+    final protein = item.nutritions.protein;
+    final carbs = item.nutritions.carbohydrates;
+    final fat = item.nutritions.fat;
+    final fiber = item.nutritions.fiber;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -283,11 +282,11 @@ class EntryDetailScreen extends StatelessWidget {
             spacing: 12,
             runSpacing: 4,
             children: [
-              _buildMiniNutritionInfo('Cal', estimatedCalories, ''),
-              _buildMiniNutritionInfo('Protein', estimatedProtein, 'g'),
-              _buildMiniNutritionInfo('Carbs', estimatedCarbs, 'g'),
-              _buildMiniNutritionInfo('Fat', estimatedFat, 'g'),
-              _buildMiniNutritionInfo('Fiber', estimatedFiber, 'g'),
+              _buildMiniNutritionInfo('Cal', calories, ''),
+              _buildMiniNutritionInfo('Protein', protein, 'g'),
+              _buildMiniNutritionInfo('Carbs', carbs, 'g'),
+              _buildMiniNutritionInfo('Fat', fat, 'g'),
+              _buildMiniNutritionInfo('Fiber', fiber, 'g'),
             ],
           ),
         ],

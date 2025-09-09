@@ -100,8 +100,11 @@ class DailySummaryCard extends StatelessWidget {
         final userProfile = settingsProvider.userProfile;
         final weight = userProfile?.weight ?? 70.0;
 
-        // Calculate recommendations based on body weight
-        final proteinTarget = _getProteinTarget(weight);
+        // Calculate recommendations based on body weight and activity
+        final proteinTarget = _getProteinTarget(
+          weight,
+          userProfile?.activityLevel,
+        );
         final carbsTarget = _getCarbsTarget(weight, userProfile?.goal);
         final fatTarget = _getFatTarget(weight);
         final fiberTarget = _getFiberTarget();
@@ -109,27 +112,44 @@ class DailySummaryCard extends StatelessWidget {
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildMacroItem(
-              'Protein',
-              totalProtein,
-              'g',
-              Colors.blue,
-              proteinTarget,
+            Expanded(
+              child: _buildMacroItem(
+                'Protein',
+                totalProtein,
+                'g',
+                Colors.blue,
+                proteinTarget,
+              ),
             ),
-            _buildMacroItem(
-              'Carbs',
-              totalCarbs,
-              'g',
-              Colors.orange,
-              carbsTarget,
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildMacroItem(
+                'Carbs',
+                totalCarbs,
+                'g',
+                Colors.orange,
+                carbsTarget,
+              ),
             ),
-            _buildMacroItem('Fat', totalFat, 'g', Colors.purple, fatTarget),
-            _buildMacroItem(
-              'Fiber',
-              totalFiber,
-              'g',
-              Colors.green,
-              fiberTarget,
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildMacroItem(
+                'Fat',
+                totalFat,
+                'g',
+                Colors.purple,
+                fatTarget,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildMacroItem(
+                'Fiber',
+                totalFiber,
+                'g',
+                Colors.green,
+                fiberTarget,
+              ),
             ),
           ],
         );
@@ -141,31 +161,115 @@ class DailySummaryCard extends StatelessWidget {
     String label,
     double value,
     String unit,
-    Color color,
-    String target,
+    Color baseColor,
+    String targetText,
   ) {
+    // Parse target values for progress calculation
+    final targetValues = _parseTargetValues(targetText);
+    final minTarget = targetValues['min'] ?? 0.0;
+    final maxTarget = targetValues['max'] ?? minTarget;
+
+    // Calculate progress (0.0 to 1.0+)
+    final progress = maxTarget > 0 ? value / maxTarget : 0.0;
+
+    // Determine progress bar color based on nutrient type and progress
+    Color progressColor = _getProgressColor(label, value, minTarget, maxTarget);
+
     return Column(
       children: [
         Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: color,
+            color: baseColor,
             fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           '${value.toStringAsFixed(1)}$unit',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        // Progress bar
+        Container(
+          height: 4,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(2),
+            color: Colors.grey[300],
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: progress.clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(2),
+                color: progressColor,
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 2),
         Text(
-          'Target: $target',
-          style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+          targetText,
+          style: TextStyle(fontSize: 9, color: Colors.grey[600]),
         ),
       ],
     );
+  }
+
+  Map<String, double> _parseTargetValues(String targetText) {
+    // Parse "25-35g" or "100g" format
+    final cleanText = targetText.replaceAll('g', '');
+    if (cleanText.contains('-')) {
+      final parts = cleanText.split('-');
+      return {
+        'min': double.tryParse(parts[0]) ?? 0.0,
+        'max': double.tryParse(parts[1]) ?? 0.0,
+      };
+    } else {
+      final value = double.tryParse(cleanText) ?? 0.0;
+      return {'min': value, 'max': value};
+    }
+  }
+
+  Color _getProgressColor(
+    String label,
+    double value,
+    double minTarget,
+    double maxTarget,
+  ) {
+    switch (label.toLowerCase()) {
+      case 'protein':
+      case 'fiber':
+        // For protein and fiber: more is generally better
+        if (value < minTarget * 0.7) {
+          return Colors.red; // Very low
+        } else if (value < minTarget) {
+          return Colors.orange; // Below minimum
+        } else if (value >= minTarget && value <= maxTarget) {
+          return Colors.green; // In target range
+        } else {
+          return Colors.blue; // Above target (good for protein/fiber)
+        }
+
+      case 'carbs':
+      case 'fat':
+        // For carbs and fat: should stay within reasonable range
+        if (value < minTarget * 0.5) {
+          return Colors.orange; // Too low
+        } else if (value >= minTarget && value <= maxTarget) {
+          return Colors.green; // In target range
+        } else if (value <= maxTarget * 1.2) {
+          return Colors.orange; // Slightly over
+        } else {
+          return Colors.red; // Way over target
+        }
+
+      default:
+        return Colors.blue;
+    }
   }
 
   Widget _buildGoalWarning(BuildContext context) {
@@ -209,9 +313,31 @@ class DailySummaryCard extends StatelessWidget {
     );
   }
 
-  String _getProteinTarget(double weight) {
-    final minProtein = weight * 1.0; // 1g per kg (minimum)
-    final maxProtein = weight * 2.0; // 2g per kg (active)
+  String _getProteinTarget(double weight, ActivityLevel? activityLevel) {
+    double minMultiplier = 1.0; // Base minimum
+    double maxMultiplier = 2.0; // Base maximum
+
+    // Adjust based on activity level
+    switch (activityLevel) {
+      case ActivityLevel.light:
+        minMultiplier = 1.0;
+        maxMultiplier = 1.6;
+        break;
+      case ActivityLevel.moderate:
+        minMultiplier = 1.2;
+        maxMultiplier = 1.8;
+        break;
+      case ActivityLevel.heavy:
+        minMultiplier = 1.6;
+        maxMultiplier = 2.2;
+        break;
+      default:
+        // Keep default values
+        break;
+    }
+
+    final minProtein = weight * minMultiplier;
+    final maxProtein = weight * maxMultiplier;
     return '${minProtein.toStringAsFixed(0)}-${maxProtein.toStringAsFixed(0)}g';
   }
 

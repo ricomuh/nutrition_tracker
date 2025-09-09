@@ -70,4 +70,15 @@ class SettingsProvider extends ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<void> resetProfile() async {
+    try {
+      await _settingsService.clearUserProfile();
+      _userProfile = null;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error resetting profile: $e');
+      rethrow;
+    }
+  }
 }

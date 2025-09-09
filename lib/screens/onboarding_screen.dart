@@ -18,6 +18,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // Form data
   final _heightController = TextEditingController();
   final _weightController = TextEditingController();
+  final _ageController = TextEditingController();
+  Gender _gender = Gender.male;
   ActivityLevel _activityLevel = ActivityLevel.moderate;
   ExerciseType _exerciseType = ExerciseType.gym;
   final _exerciseFrequencyController = TextEditingController();
@@ -33,6 +35,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     });
 
     _weightController.addListener(() {
+      setState(() {});
+    });
+
+    _ageController.addListener(() {
       setState(() {});
     });
 
@@ -119,22 +125,72 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 32),
-          TextField(
-            controller: _heightController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Height (cm)',
-              border: OutlineInputBorder(),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _heightController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Height (cm)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextField(
+                  controller: _weightController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Weight (kg)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: _weightController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Weight (kg)',
-              border: OutlineInputBorder(),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _ageController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Age (years)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Gender'),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<Gender>(
+                      value: _gender,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                      ),
+                      items: Gender.values.map((gender) {
+                        return DropdownMenuItem(
+                          value: gender,
+                          child: Text(_getGenderName(gender)),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _gender = value!;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 48),
           Row(
@@ -390,11 +446,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildSummaryPage() {
     final height = double.tryParse(_heightController.text) ?? 0;
     final weight = double.tryParse(_weightController.text) ?? 0;
+    final age = int.tryParse(_ageController.text) ?? 0;
     final exerciseFreq = int.tryParse(_exerciseFrequencyController.text) ?? 0;
 
     final tempProfile = UserProfile(
       height: height,
       weight: weight,
+      age: age,
+      gender: _gender,
       activityLevel: _activityLevel,
       exerciseType: _exerciseType,
       exerciseFrequency: exerciseFreq,
@@ -497,7 +556,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _canProceedFromHeightWeight() {
     final height = double.tryParse(_heightController.text);
     final weight = double.tryParse(_weightController.text);
-    return height != null && height > 0 && weight != null && weight > 0;
+    final age = int.tryParse(_ageController.text);
+    return height != null &&
+        height > 0 &&
+        weight != null &&
+        weight > 0 &&
+        age != null &&
+        age > 0;
   }
 
   bool _canProceedFromExercise() {
@@ -512,6 +577,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final profile = UserProfile(
         height: double.parse(_heightController.text),
         weight: double.parse(_weightController.text),
+        age: int.parse(_ageController.text),
+        gender: _gender,
         activityLevel: _activityLevel,
         exerciseType: _exerciseType,
         exerciseFrequency: int.parse(_exerciseFrequencyController.text),
@@ -537,11 +604,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  String _getGenderName(Gender gender) {
+    switch (gender) {
+      case Gender.male:
+        return 'Male';
+      case Gender.female:
+        return 'Female';
+    }
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
     _heightController.dispose();
     _weightController.dispose();
+    _ageController.dispose();
     _exerciseFrequencyController.dispose();
     super.dispose();
   }

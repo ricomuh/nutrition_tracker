@@ -9,6 +9,8 @@ part of 'user_profile.dart';
 UserProfile _$UserProfileFromJson(Map<String, dynamic> json) => UserProfile(
   height: (json['height'] as num).toDouble(),
   weight: (json['weight'] as num).toDouble(),
+  age: (json['age'] as num).toInt(),
+  gender: $enumDecode(_$GenderEnumMap, json['gender']),
   activityLevel: $enumDecode(_$ActivityLevelEnumMap, json['activityLevel']),
   exerciseType: $enumDecode(_$ExerciseTypeEnumMap, json['exerciseType']),
   exerciseFrequency: (json['exerciseFrequency'] as num).toInt(),
@@ -24,6 +26,8 @@ Map<String, dynamic> _$UserProfileToJson(UserProfile instance) =>
     <String, dynamic>{
       'height': instance.height,
       'weight': instance.weight,
+      'age': instance.age,
+      'gender': _$GenderEnumMap[instance.gender]!,
       'activityLevel': _$ActivityLevelEnumMap[instance.activityLevel]!,
       'exerciseType': _$ExerciseTypeEnumMap[instance.exerciseType]!,
       'exerciseFrequency': instance.exerciseFrequency,
@@ -32,6 +36,8 @@ Map<String, dynamic> _$UserProfileToJson(UserProfile instance) =>
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };
+
+const _$GenderEnumMap = {Gender.male: 'male', Gender.female: 'female'};
 
 const _$ActivityLevelEnumMap = {
   ActivityLevel.light: 'light',

@@ -17,9 +17,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _openaiApiKeyController = TextEditingController();
   final _heightController = TextEditingController();
   final _weightController = TextEditingController();
+  final _ageController = TextEditingController();
   final _exerciseFrequencyController = TextEditingController();
 
   AiProvider _selectedAiProvider = AiProvider.gemini;
+  Gender _gender = Gender.male;
   ActivityLevel _activityLevel = ActivityLevel.moderate;
   ExerciseType _exerciseType = ExerciseType.gym;
   Goal _goal = Goal.maintain;
@@ -45,6 +47,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (userProfile != null) {
       _heightController.text = userProfile.height.toString();
       _weightController.text = userProfile.weight.toString();
+      _ageController.text = userProfile.age.toString();
+      _gender = userProfile.gender;
       _exerciseFrequencyController.text = userProfile.exerciseFrequency
           .toString();
       _activityLevel = userProfile.activityLevel;
@@ -174,6 +178,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _ageController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Age (years)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Gender'),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<Gender>(
+                        value: _gender,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
+                        items: Gender.values.map((gender) {
+                          return DropdownMenuItem(
+                            value: gender,
+                            child: Text(_getGenderName(gender)),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _gender = value!;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             const Text('Activity Level'),
             ...ActivityLevel.values.map(
               (level) => RadioListTile<ActivityLevel>(
@@ -286,11 +332,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildCalorieDisplay() {
     final height = double.tryParse(_heightController.text) ?? 170;
     final weight = double.tryParse(_weightController.text) ?? 70;
+    final age = int.tryParse(_ageController.text) ?? 25;
     final exerciseFreq = int.tryParse(_exerciseFrequencyController.text) ?? 3;
 
     final tempProfile = UserProfile(
       height: height,
       weight: weight,
+      age: age,
+      gender: _gender,
       activityLevel: _activityLevel,
       exerciseType: _exerciseType,
       exerciseFrequency: exerciseFreq,
@@ -396,6 +445,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _getGenderName(Gender gender) {
+    switch (gender) {
+      case Gender.male:
+        return 'Male';
+      case Gender.female:
+        return 'Female';
+    }
+  }
+
   Future<void> _saveSettings() async {
     try {
       final settingsProvider = context.read<SettingsProvider>();
@@ -417,12 +475,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // Save user profile
       final height = double.tryParse(_heightController.text);
       final weight = double.tryParse(_weightController.text);
+      final age = int.tryParse(_ageController.text);
       final exerciseFreq = int.tryParse(_exerciseFrequencyController.text);
 
-      if (height != null && weight != null && exerciseFreq != null) {
+      if (height != null &&
+          weight != null &&
+          age != null &&
+          exerciseFreq != null) {
         final newProfile = UserProfile(
           height: height,
           weight: weight,
+          age: age,
+          gender: _gender,
           activityLevel: _activityLevel,
           exerciseType: _exerciseType,
           exerciseFrequency: exerciseFreq,
@@ -507,6 +571,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _openaiApiKeyController.dispose();
     _heightController.dispose();
     _weightController.dispose();
+    _ageController.dispose();
     _exerciseFrequencyController.dispose();
     super.dispose();
   }

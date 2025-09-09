@@ -29,10 +29,19 @@ enum Goal {
   cutting,
 }
 
+enum Gender {
+  @JsonValue('male')
+  male,
+  @JsonValue('female')
+  female,
+}
+
 @JsonSerializable()
 class UserProfile {
   final double height; // in cm
   final double weight; // in kg
+  final int age; // in years
+  final Gender gender;
   final ActivityLevel activityLevel;
   final ExerciseType exerciseType;
   final int exerciseFrequency; // per week
@@ -44,6 +53,8 @@ class UserProfile {
   const UserProfile({
     required this.height,
     required this.weight,
+    required this.age,
+    required this.gender,
     required this.activityLevel,
     required this.exerciseType,
     required this.exerciseFrequency,
@@ -56,8 +67,13 @@ class UserProfile {
   double get bmi => weight / ((height / 100) * (height / 100));
 
   double get tdee {
-    // Mifflin-St Jeor equation (assuming average gender for simplicity)
-    double bmr = 10 * weight + 6.25 * height - 5 * 25 + 5; // Assuming age 25
+    // Mifflin-St Jeor equation with accurate gender and age
+    double bmr;
+    if (gender == Gender.male) {
+      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+    } else {
+      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+    }
 
     // Activity factor
     double activityFactor;
@@ -84,6 +100,8 @@ class UserProfile {
   UserProfile copyWith({
     double? height,
     double? weight,
+    int? age,
+    Gender? gender,
     ActivityLevel? activityLevel,
     ExerciseType? exerciseType,
     int? exerciseFrequency,
@@ -94,6 +112,8 @@ class UserProfile {
     return UserProfile(
       height: height ?? this.height,
       weight: weight ?? this.weight,
+      age: age ?? this.age,
+      gender: gender ?? this.gender,
       activityLevel: activityLevel ?? this.activityLevel,
       exerciseType: exerciseType ?? this.exerciseType,
       exerciseFrequency: exerciseFrequency ?? this.exerciseFrequency,

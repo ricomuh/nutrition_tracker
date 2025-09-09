@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/nutrition_provider.dart';
+import 'providers/daily_analysis_provider.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,6 +19,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => NutritionProvider()),
+        ChangeNotifierProvider(create: (_) => DailyAnalysisProvider()),
       ],
       child: MaterialApp(
         title: 'Nutrition Tracker',
@@ -29,10 +31,11 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
           appBarTheme: const AppBarTheme(centerTitle: true),
         ),
-        home: const SplashScreen(),
+        initialRoute: '/',
         routes: {
+          '/': (context) => const SplashScreen(),
           '/onboarding': (context) => const OnboardingScreen(),
-          '/home': (context) => const HomeScreen(),
+          '/home': (context) => const MainNavigationScreen(),
         },
       ),
     );

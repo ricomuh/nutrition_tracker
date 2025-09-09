@@ -60,4 +60,9 @@ class SettingsService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
   }
+
+  Future<void> clearUserProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_userProfileKey);
+  }
 }

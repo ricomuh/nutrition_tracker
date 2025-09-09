@@ -688,13 +688,12 @@ class _AddFoodScreenState extends State<AddFoodScreen>
   }
 
   Widget _buildFoodItemCard(FoodItem item) {
-    // Estimate nutrition per item (simplified calculation)
-    final totalItems = _aiResponse!.items.length;
-    final estimatedCalories = _aiResponse!.calories / totalItems;
-    final estimatedProtein = _aiResponse!.protein / totalItems;
-    final estimatedCarbs = _aiResponse!.carbohydrates / totalItems;
-    final estimatedFat = _aiResponse!.fat / totalItems;
-    final estimatedFiber = _aiResponse!.fiber / totalItems;
+    // Use actual nutrition data per item if available, otherwise fall back to estimation
+    final calories = item.nutritions.calories;
+    final protein = item.nutritions.protein;
+    final carbs = item.nutritions.carbohydrates;
+    final fat = item.nutritions.fat;
+    final fiber = item.nutritions.fiber;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -740,34 +739,19 @@ class _AddFoodScreenState extends State<AddFoodScreen>
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildMiniNutritionInfo('Cal', estimatedCalories, '', Colors.red),
+              _buildMiniNutritionInfo('Cal', calories, '', Colors.red),
               const SizedBox(width: 12),
-              _buildMiniNutritionInfo(
-                'Protein',
-                estimatedProtein,
-                'g',
-                Colors.blue,
-              ),
+              _buildMiniNutritionInfo('Protein', protein, 'g', Colors.blue),
               const SizedBox(width: 12),
-              _buildMiniNutritionInfo(
-                'Carbs',
-                estimatedCarbs,
-                'g',
-                Colors.orange,
-              ),
+              _buildMiniNutritionInfo('Carbs', carbs, 'g', Colors.orange),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              _buildMiniNutritionInfo('Fat', estimatedFat, 'g', Colors.purple),
+              _buildMiniNutritionInfo('Fat', fat, 'g', Colors.purple),
               const SizedBox(width: 12),
-              _buildMiniNutritionInfo(
-                'Fiber',
-                estimatedFiber,
-                'g',
-                Colors.green,
-              ),
+              _buildMiniNutritionInfo('Fiber', fiber, 'g', Colors.green),
             ],
           ),
         ],
@@ -926,9 +910,12 @@ class _AddFoodScreenState extends State<AddFoodScreen>
         _revisionController.clear();
       });
 
-      // Show success message and return to previous screen
+      // Show success message and reset form instead of popping
       _showSuccessMessage('Recalculated entry saved successfully!');
-      Navigator.of(context).pop();
+      _resetAnalysis();
+      _selectedMealType = null;
+      _selectedImage = null;
+      _selectedImageBytes = null;
     } catch (e) {
       _showErrorMessage('Error recalculating nutrition: $e');
     } finally {
@@ -998,7 +985,13 @@ class _AddFoodScreenState extends State<AddFoodScreen>
       await nutritionProvider.addEntry(entry);
 
       if (mounted) {
-        Navigator.of(context).pop();
+        // Don't use Navigator.pop() in tab navigation, instead clear the form
+        _resetAnalysis();
+        _selectedMealType = null;
+        _selectedImage = null;
+        _selectedImageBytes = null;
+        _aiResponse = null;
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Food entry saved successfully!')),
         );

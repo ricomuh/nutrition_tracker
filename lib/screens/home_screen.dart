@@ -6,47 +6,64 @@ import '../providers/settings_provider.dart';
 import '../models/nutrition_entry.dart';
 import '../widgets/daily_summary_card.dart';
 import '../widgets/meal_section.dart';
-import 'settings_screen.dart';
 import 'add_food_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final DateTime? selectedDate;
+  final Function(DateTime)? onDateChanged;
+
+  const HomeScreen({super.key, this.selectedDate, this.onDateChanged});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
 
   @override
   void initState() {
     super.initState();
+    _selectedDate = widget.selectedDate ?? DateTime.now();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
   }
 
+  @override
+  void didUpdateWidget(HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedDate != oldWidget.selectedDate) {
+      _selectedDate = widget.selectedDate ?? DateTime.now();
+      _loadData();
+    }
+  }
+
   Future<void> _loadData() async {
-    final nutritionProvider = context.read<NutritionProvider>();
-    await nutritionProvider.loadEntriesForDate(_selectedDate);
+    try {
+      final nutritionProvider = context.read<NutritionProvider>();
+      await nutritionProvider.loadEntriesForDate(_selectedDate);
+    } catch (e) {
+      debugPrint('Error loading data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nutrition Tracker'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-            },
-          ),
-        ],
+        title: const Text('Daily Overview'),
+        backgroundColor: Colors.green[700],
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Consumer<NutritionProvider>(
         builder: (context, nutritionProvider, child) {
@@ -80,16 +97,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => AddFoodScreen(selectedDate: _selectedDate),
-            ),
-          );
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -171,9 +178,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _changeDate(int days) {
+    final newDate = _selectedDate.add(Duration(days: days));
     setState(() {
-      _selectedDate = _selectedDate.add(Duration(days: days));
+      _selectedDate = newDate;
     });
+    widget.onDateChanged?.call(newDate);
     _loadData();
   }
 
@@ -189,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _selectedDate = picked;
       });
+      widget.onDateChanged?.call(picked);
       _loadData();
     }
   }
