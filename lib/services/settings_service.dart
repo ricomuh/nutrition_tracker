@@ -24,6 +24,10 @@ class SettingsService {
       geminiApiKey: settingsMap['geminiApiKey'],
       openaiApiKey: settingsMap['openaiApiKey'],
       isFirstRun: settingsMap['isFirstRun'] ?? true,
+      responseLanguage: ResponseLanguage.values.firstWhere(
+        (e) => e.name == settingsMap['responseLanguage'],
+        orElse: () => ResponseLanguage.english,
+      ),
     );
   }
 
@@ -34,6 +38,7 @@ class SettingsService {
       'geminiApiKey': settings.geminiApiKey,
       'openaiApiKey': settings.openaiApiKey,
       'isFirstRun': settings.isFirstRun,
+      'responseLanguage': settings.responseLanguage.name,
     };
 
     await prefs.setString(_settingsKey, jsonEncode(settingsMap));

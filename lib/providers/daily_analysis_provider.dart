@@ -40,6 +40,7 @@ class DailyAnalysisProvider with ChangeNotifier {
         provider: settings.aiProvider,
         apiKey: _getApiKey(settings),
         demoMode: _isDemoMode(settings),
+        language: settings.responseLanguage,
       );
 
       final dateKey = _getDateKey(analysis.date);
@@ -84,6 +85,7 @@ class DailyAnalysisProvider with ChangeNotifier {
         provider: settings.aiProvider,
         apiKey: _getApiKey(settings),
         demoMode: _isDemoMode(settings),
+        language: settings.responseLanguage,
       );
 
       // Update analysis with both messages

@@ -21,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _exerciseFrequencyController = TextEditingController();
 
   AiProvider _selectedAiProvider = AiProvider.gemini;
+  ResponseLanguage _selectedLanguage = ResponseLanguage.english;
   Gender _gender = Gender.male;
   ActivityLevel _activityLevel = ActivityLevel.moderate;
   ExerciseType _exerciseType = ExerciseType.gym;
@@ -40,6 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     // Load AI settings
     _selectedAiProvider = settings.aiProvider;
+    _selectedLanguage = settings.responseLanguage;
     _geminiApiKeyController.text = settings.geminiApiKey ?? '';
     _openaiApiKeyController.text = settings.openaiApiKey ?? '';
 
@@ -111,6 +113,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (value) {
                 setState(() {
                   _selectedAiProvider = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text('Response Language'),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<ResponseLanguage>(
+              value: _selectedLanguage,
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+              items: ResponseLanguage.values.map((language) {
+                return DropdownMenuItem(
+                  value: language,
+                  child: Text(
+                    language == ResponseLanguage.english
+                        ? 'English'
+                        : 'Bahasa Indonesia',
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedLanguage = value!;
                 });
               },
             ),
@@ -467,6 +491,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         openaiApiKey: _openaiApiKeyController.text.isEmpty
             ? null
             : _openaiApiKeyController.text,
+        responseLanguage: _selectedLanguage,
         isFirstRun: settingsProvider.settings.isFirstRun,
       );
 

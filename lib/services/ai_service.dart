@@ -5,6 +5,7 @@ import '../models/ai_analysis_response.dart';
 import '../models/app_settings.dart';
 import '../models/daily_analysis.dart';
 import 'demo_data_service.dart';
+import 'language_service.dart';
 
 class AiService {
   static const String _geminiBaseUrl =
@@ -18,6 +19,7 @@ class AiService {
     required String apiKey,
     String? foodBreakdown,
     bool demoMode = false,
+    ResponseLanguage language = ResponseLanguage.english,
   }) async {
     // Return demo data if no API key or demo mode enabled
     if (demoMode || apiKey.isEmpty) {
@@ -28,9 +30,19 @@ class AiService {
 
     switch (provider) {
       case AiProvider.gemini:
-        return await _analyzeWithGemini(imageBytes, apiKey, foodBreakdown);
+        return await _analyzeWithGemini(
+          imageBytes,
+          apiKey,
+          foodBreakdown,
+          language,
+        );
       case AiProvider.openai:
-        return await _analyzeWithOpenAI(imageBytes, apiKey, foodBreakdown);
+        return await _analyzeWithOpenAI(
+          imageBytes,
+          apiKey,
+          foodBreakdown,
+          language,
+        );
     }
   }
 
@@ -40,6 +52,7 @@ class AiService {
     required String apiKey,
     String? foodBreakdown,
     bool demoMode = false,
+    ResponseLanguage language = ResponseLanguage.english,
   }) async {
     // Return demo data if no API key or demo mode enabled
     if (demoMode || apiKey.isEmpty) {
@@ -54,12 +67,14 @@ class AiService {
           foodName,
           apiKey,
           foodBreakdown,
+          language,
         );
       case AiProvider.openai:
         return await _analyzeTextOnlyWithOpenAI(
           foodName,
           apiKey,
           foodBreakdown,
+          language,
         );
     }
   }
@@ -69,6 +84,7 @@ class AiService {
     required AiProvider provider,
     required String apiKey,
     bool demoMode = false,
+    ResponseLanguage language = ResponseLanguage.english,
   }) async {
     // Return demo data if no API key or demo mode enabled
     if (demoMode || apiKey.isEmpty) {
@@ -79,9 +95,9 @@ class AiService {
 
     switch (provider) {
       case AiProvider.gemini:
-        return await _analyzeDailyWithGemini(request, apiKey);
+        return await _analyzeDailyWithGemini(request, apiKey, language);
       case AiProvider.openai:
-        return await _analyzeDailyWithOpenAI(request, apiKey);
+        return await _analyzeDailyWithOpenAI(request, apiKey, language);
     }
   }
 
@@ -91,6 +107,7 @@ class AiService {
     required AiProvider provider,
     required String apiKey,
     bool demoMode = false,
+    ResponseLanguage language = ResponseLanguage.english,
   }) async {
     // Return demo data if no API key or demo mode enabled
     if (demoMode || apiKey.isEmpty) {
@@ -101,9 +118,19 @@ class AiService {
 
     switch (provider) {
       case AiProvider.gemini:
-        return await _continuechatWithGemini(message, analysis, apiKey);
+        return await _continuechatWithGemini(
+          message,
+          analysis,
+          apiKey,
+          language,
+        );
       case AiProvider.openai:
-        return await _continueCharWithOpenAI(message, analysis, apiKey);
+        return await _continueCharWithOpenAI(
+          message,
+          analysis,
+          apiKey,
+          language,
+        );
     }
   }
 
@@ -132,11 +159,12 @@ class AiService {
     Uint8List imageBytes,
     String apiKey,
     String? foodBreakdown,
+    ResponseLanguage language,
   ) async {
     try {
       final base64Image = base64Encode(imageBytes);
 
-      final prompt = _buildAnalysisPrompt(foodBreakdown);
+      final prompt = _buildAnalysisPrompt(foodBreakdown, language);
 
       final body = {
         "contents": [
@@ -176,11 +204,12 @@ class AiService {
     Uint8List imageBytes,
     String apiKey,
     String? foodBreakdown,
+    ResponseLanguage language,
   ) async {
     try {
       final base64Image = base64Encode(imageBytes);
 
-      final prompt = _buildAnalysisPrompt(foodBreakdown);
+      final prompt = _buildAnalysisPrompt(foodBreakdown, language);
 
       final body = {
         "model": "gpt-4-vision-preview",
@@ -226,9 +255,14 @@ class AiService {
     String foodName,
     String apiKey,
     String? foodBreakdown,
+    ResponseLanguage language,
   ) async {
     try {
-      final prompt = _buildTextOnlyAnalysisPrompt(foodName, foodBreakdown);
+      final prompt = _buildTextOnlyAnalysisPrompt(
+        foodName,
+        foodBreakdown,
+        language,
+      );
 
       final body = {
         "contents": [
@@ -265,9 +299,14 @@ class AiService {
     String foodName,
     String apiKey,
     String? foodBreakdown,
+    ResponseLanguage language,
   ) async {
     try {
-      final prompt = _buildTextOnlyAnalysisPrompt(foodName, foodBreakdown);
+      final prompt = _buildTextOnlyAnalysisPrompt(
+        foodName,
+        foodBreakdown,
+        language,
+      );
 
       final body = {
         "model": "gpt-4",
@@ -380,7 +419,10 @@ class AiService {
     }
   }
 
-  String _buildAnalysisPrompt(String? foodBreakdown) {
+  String _buildAnalysisPrompt(
+    String? foodBreakdown,
+    ResponseLanguage language,
+  ) {
     String prompt =
         '''
 Analyze this food image and provide nutritional information. ${foodBreakdown != null ? "The user has provided this breakdown: $foodBreakdown. Use this as a guide but verify against the image." : ""}
@@ -414,12 +456,16 @@ Important:
 - Provide accurate nutritional values for each individual food item
 - The total nutrition values should be the sum of all individual items
 - Be detailed and precise with portion sizes and nutritional breakdown
-- Provide an encouraging comment about the meal choice
+- Provide an encouraging comment about the meal choice${LanguageService.getLanguagePrompt(language)}
 ''';
     return prompt;
   }
 
-  String _buildTextOnlyAnalysisPrompt(String foodName, String? foodBreakdown) {
+  String _buildTextOnlyAnalysisPrompt(
+    String foodName,
+    String? foodBreakdown,
+    ResponseLanguage language,
+  ) {
     String prompt =
         '''
 Analyze this food based on the name "${foodName}" and estimate nutritional information. ${foodBreakdown != null ? "The user has provided this breakdown: $foodBreakdown. Use this as additional information." : ""}
@@ -454,7 +500,7 @@ Return ONLY a valid JSON object with this exact structure:
 Important:
 - Provide nutritional estimates for each individual food item
 - The total nutrition values should be the sum of all individual items
-- Be conservative with estimates and mention in the comment that this is an estimate without visual confirmation
+- Be conservative with estimates and mention in the comment that this is an estimate without visual confirmation${LanguageService.getLanguagePrompt(language)}
 ''';
     return prompt;
   }
@@ -545,9 +591,10 @@ Important:
   Future<DailyAnalysis> _analyzeDailyWithGemini(
     DailyAnalysisRequest request,
     String apiKey,
+    ResponseLanguage language,
   ) async {
     try {
-      final prompt = _buildDailyAnalysisPrompt(request);
+      final prompt = _buildDailyAnalysisPrompt(request, language);
 
       final body = {
         "contents": [
@@ -585,9 +632,10 @@ Important:
   Future<DailyAnalysis> _analyzeDailyWithOpenAI(
     DailyAnalysisRequest request,
     String apiKey,
+    ResponseLanguage language,
   ) async {
     try {
-      final prompt = _buildDailyAnalysisPrompt(request);
+      final prompt = _buildDailyAnalysisPrompt(request, language);
 
       final body = {
         "model": "gpt-4",
@@ -626,9 +674,10 @@ Important:
     String message,
     DailyAnalysis analysis,
     String apiKey,
+    ResponseLanguage language,
   ) async {
     try {
-      final prompt = _buildChatPrompt(message, analysis);
+      final prompt = _buildChatPrompt(message, analysis, language);
 
       final body = {
         "contents": [
@@ -671,9 +720,10 @@ Important:
     String message,
     DailyAnalysis analysis,
     String apiKey,
+    ResponseLanguage language,
   ) async {
     try {
-      final prompt = _buildChatPrompt(message, analysis);
+      final prompt = _buildChatPrompt(message, analysis, language);
 
       final body = {
         "model": "gpt-4",
@@ -712,7 +762,10 @@ Important:
     }
   }
 
-  String _buildDailyAnalysisPrompt(DailyAnalysisRequest request) {
+  String _buildDailyAnalysisPrompt(
+    DailyAnalysisRequest request,
+    ResponseLanguage language,
+  ) {
     final stats = request.stats;
     final profile = request.profile;
     final foods = request.foodItems;
@@ -747,11 +800,15 @@ Return ONLY a valid JSON object with this exact structure:
   "activityIntegration": "Connect nutrition with their fitness goals (e.g., 'With a 200 kcal deficit today, you're on track for fat loss. Ensure adequate energy for your next workout.')"
 }
 
-Keep the tone encouraging, professional, and actionable. Focus on practical advice aligned with their specific goals and activity level.
+Keep the tone encouraging, professional, and actionable. Focus on practical advice aligned with their specific goals and activity level.${LanguageService.getLanguagePrompt(language)}
 ''';
   }
 
-  String _buildChatPrompt(String userMessage, DailyAnalysis analysis) {
+  String _buildChatPrompt(
+    String userMessage,
+    DailyAnalysis analysis,
+    ResponseLanguage language,
+  ) {
     return '''
 You are a professional nutritionist continuing a conversation about today's nutrition analysis.
 
@@ -764,7 +821,7 @@ Activity Integration: ${analysis.activityIntegration}
 
 USER'S NEW QUESTION/COMMENT: ${userMessage}
 
-Respond naturally as a supportive nutritionist. Provide helpful, specific advice while maintaining context from the previous analysis. Keep responses concise but informative.
+Respond naturally as a supportive nutritionist. Provide helpful, specific advice while maintaining context from the previous analysis. Keep responses concise but informative.${LanguageService.getLanguagePrompt(language)}
 ''';
   }
 

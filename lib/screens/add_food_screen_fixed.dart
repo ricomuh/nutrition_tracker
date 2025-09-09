@@ -420,6 +420,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
             ? _foodBreakdownController.text
             : null,
         demoMode: !hasApiKey,
+        language: settings.responseLanguage,
       );
 
       setState(() {
