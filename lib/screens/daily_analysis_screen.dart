@@ -6,6 +6,7 @@ import '../providers/settings_provider.dart';
 import '../models/daily_analysis.dart';
 import '../models/user_profile.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/chat_bubble.dart';
 
 class DailyAnalysisScreen extends StatefulWidget {
   final DateTime? selectedDate;
@@ -268,25 +269,28 @@ class _DailyAnalysisScreenState extends State<DailyAnalysisScreen> {
             ),
         ],
       ),
-      body: _isGenerating
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Analyzing your daily nutrition...'),
-                  SizedBox(height: 8),
-                  Text(
-                    'This may take a few seconds',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          : _analysis == null
-          ? _buildErrorState()
-          : _buildAnalysisContent(),
+      body: Container(
+        color: Colors.grey[50], // Light background for chat
+        child: _isGenerating
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Analyzing your daily nutrition...'),
+                    SizedBox(height: 8),
+                    Text(
+                      'This may take a few seconds',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              )
+            : _analysis == null
+            ? _buildErrorState()
+            : _buildAnalysisContent(),
+      ),
     );
   }
 
@@ -319,153 +323,76 @@ class _DailyAnalysisScreenState extends State<DailyAnalysisScreen> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
+          child: ListView(
             controller: _scrollController,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildAnalysisCard(
-                  'Daily Summary',
-                  _analysis!.summary,
-                  Icons.summarize,
-                  Colors.blue,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            children: [
+              // AI Analysis Messages
+              ChatBubble(
+                message: _analysis!.summary,
+                isUser: false,
+                title: 'Daily Summary',
+                icon: Icons.summarize,
+                accentColor: Colors.blue[700],
+              ),
+              const SizedBox(height: 12),
+              ChatBubble(
+                message: _analysis!.strengths,
+                isUser: false,
+                title: 'Strengths',
+                icon: Icons.thumb_up,
+                accentColor: Colors.green[700],
+              ),
+              const SizedBox(height: 12),
+              ChatBubble(
+                message: _analysis!.weaknesses,
+                isUser: false,
+                title: 'Areas to Improve',
+                icon: Icons.warning,
+                accentColor: Colors.orange[700],
+              ),
+              const SizedBox(height: 12),
+              ChatBubble(
+                message: _analysis!.recommendations,
+                isUser: false,
+                title: 'Recommendations',
+                icon: Icons.lightbulb,
+                accentColor: Colors.purple[700],
+              ),
+              const SizedBox(height: 12),
+              ChatBubble(
+                message: _analysis!.activityIntegration,
+                isUser: false,
+                title: 'Activity Integration',
+                icon: Icons.fitness_center,
+                accentColor: Colors.teal[700],
+              ),
+
+              // Chat History
+              if (_analysis!.chatHistory.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(color: Colors.grey[300], thickness: 1),
                 ),
-                const SizedBox(height: 16),
-                _buildAnalysisCard(
-                  'Strengths',
-                  _analysis!.strengths,
-                  Icons.thumb_up,
-                  Colors.green,
+                const SizedBox(height: 8),
+                ..._analysis!.chatHistory.map(
+                  (message) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: ChatBubble(
+                      message: message.message,
+                      isUser: message.isUser,
+                      timestamp: message.timestamp,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                _buildAnalysisCard(
-                  'Areas to Improve',
-                  _analysis!.weaknesses,
-                  Icons.warning,
-                  Colors.orange,
-                ),
-                const SizedBox(height: 16),
-                _buildAnalysisCard(
-                  'Recommendations',
-                  _analysis!.recommendations,
-                  Icons.lightbulb,
-                  Colors.purple,
-                ),
-                const SizedBox(height: 16),
-                _buildAnalysisCard(
-                  'Activity Integration',
-                  _analysis!.activityIntegration,
-                  Icons.fitness_center,
-                  Colors.teal,
-                ),
-                const SizedBox(height: 16),
-                if (_analysis!.chatHistory.isNotEmpty) ...[
-                  _buildChatHistory(),
-                  const SizedBox(height: 16),
-                ],
               ],
-            ),
+              const SizedBox(height: 16),
+            ],
           ),
         ),
         _buildChatInput(),
       ],
-    );
-  }
-
-  Widget _buildAnalysisCard(
-    String title,
-    String content,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(content, style: const TextStyle(fontSize: 14, height: 1.4)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChatHistory() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.chat, color: Colors.indigo, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Conversation',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.indigo,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ..._analysis!.chatHistory.map(
-              (message) => _buildChatMessage(message),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChatMessage(ChatMessage message) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            message.isUser ? Icons.person : Icons.psychology,
-            size: 16,
-            color: message.isUser ? Colors.blue : Colors.green,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message.message,
-              style: TextStyle(
-                fontSize: 13,
-                color: message.isUser ? Colors.blue[700] : Colors.green[700],
-                fontWeight: message.isUser
-                    ? FontWeight.w500
-                    : FontWeight.normal,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -477,7 +404,7 @@ class _DailyAnalysisScreenState extends State<DailyAnalysisScreen> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withOpacity(0.2),
                 spreadRadius: 1,
                 blurRadius: 3,
                 offset: const Offset(0, -1),
@@ -485,38 +412,58 @@ class _DailyAnalysisScreenState extends State<DailyAnalysisScreen> {
             ],
           ),
           padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _chatController,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask about your nutrition...',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+          child: SafeArea(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: TextField(
+                      controller: _chatController,
+                      decoration: const InputDecoration(
+                        hintText: 'Ask about your nutrition...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      maxLines: null,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
+                      enabled: !provider.isLoading,
                     ),
                   ),
-                  maxLines: null,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
-                  enabled: !provider.isLoading,
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: provider.isLoading ? null : _sendMessage,
-                icon: provider.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.send),
-                color: Colors.green[700],
-              ),
-            ],
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.green[700],
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: IconButton(
+                    onPressed: provider.isLoading ? null : _sendMessage,
+                    icon: provider.isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Icon(Icons.send),
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
