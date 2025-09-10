@@ -105,17 +105,25 @@ class DailyAnalysisProvider with ChangeNotifier {
     }
   }
 
-  String _getApiKey(AppSettings settings) {
+  dynamic _getApiKey(AppSettings settings) {
     switch (settings.aiProvider) {
       case AiProvider.gemini:
         return settings.geminiApiKey ?? '';
       case AiProvider.openai:
         return settings.openaiApiKey ?? '';
+      case AiProvider.lunos:
+        return settings.lunosApiKeys;
     }
   }
 
   bool _isDemoMode(AppSettings settings) {
-    return _getApiKey(settings).isEmpty;
+    final apiKey = _getApiKey(settings);
+    if (apiKey is String) {
+      return apiKey.isEmpty;
+    } else if (apiKey is List<String>) {
+      return apiKey.isEmpty || apiKey.every((key) => key.isEmpty);
+    }
+    return true;
   }
 
   void clearError() {

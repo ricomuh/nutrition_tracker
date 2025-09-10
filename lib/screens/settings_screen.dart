@@ -105,9 +105,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               initialValue: _selectedAiProvider,
               decoration: const InputDecoration(border: OutlineInputBorder()),
               items: AiProvider.values.map((provider) {
+                String displayName;
+                switch (provider) {
+                  case AiProvider.gemini:
+                    displayName = 'Google Gemini';
+                    break;
+                  case AiProvider.openai:
+                    displayName = 'OpenAI GPT';
+                    break;
+                  case AiProvider.lunos:
+                    displayName = 'Lunos.tech';
+                    break;
+                }
                 return DropdownMenuItem(
                   value: provider,
-                  child: Text(provider.name.toUpperCase()),
+                  child: Text(displayName),
                 );
               }).toList(),
               onChanged: (value) {
@@ -139,25 +151,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _geminiApiKeyController,
-              decoration: const InputDecoration(
-                labelText: 'Gemini API Key',
-                border: OutlineInputBorder(),
-                hintText: 'Enter your Google Gemini API key',
+            if (_selectedAiProvider != AiProvider.lunos) ...[
+              TextField(
+                controller: _geminiApiKeyController,
+                decoration: const InputDecoration(
+                  labelText: 'Gemini API Key',
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter your Google Gemini API key',
+                ),
+                obscureText: true,
               ),
-              obscureText: true,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _openaiApiKeyController,
-              decoration: const InputDecoration(
-                labelText: 'OpenAI API Key',
-                border: OutlineInputBorder(),
-                hintText: 'Enter your OpenAI API key',
+              const SizedBox(height: 16),
+              TextField(
+                controller: _openaiApiKeyController,
+                decoration: const InputDecoration(
+                  labelText: 'OpenAI API Key',
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter your OpenAI API key',
+                ),
+                obscureText: true,
               ),
-              obscureText: true,
-            ),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  border: Border.all(color: Colors.green[200]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green[700]),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Lunos.tech API Ready',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'API keys are pre-configured with automatic fallback',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.green[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

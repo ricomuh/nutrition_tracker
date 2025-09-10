@@ -12,17 +12,32 @@ class AiService {
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
   static const String _openaiBaseUrl =
       'https://api.openai.com/v1/chat/completions';
+  static const String _lunosBaseUrl =
+      'https://api.lunos.tech/v1/chat/completions';
+
+  // Track current API key index for Lunos rotation
+  int _currentLunosKeyIndex = 0;
+
+  // Helper method to check if API key is empty
+  bool _isApiKeyEmpty(dynamic apiKey) {
+    if (apiKey is String) {
+      return apiKey.isEmpty;
+    } else if (apiKey is List<String>) {
+      return apiKey.isEmpty || apiKey.every((key) => key.isEmpty);
+    }
+    return true;
+  }
 
   Future<AiAnalysisResponse> analyzeFood({
     required Uint8List imageBytes,
     required AiProvider provider,
-    required String apiKey,
+    required dynamic apiKey, // Can be String or List<String> for Lunos
     String? foodBreakdown,
     bool demoMode = false,
     ResponseLanguage language = ResponseLanguage.english,
   }) async {
     // Return demo data if no API key or demo mode enabled
-    if (demoMode || apiKey.isEmpty) {
+    if (demoMode || _isApiKeyEmpty(apiKey)) {
       // Simulate network delay
       await Future.delayed(const Duration(seconds: 2));
       return DemoDataService.getRandomDemo();
@@ -32,14 +47,21 @@ class AiService {
       case AiProvider.gemini:
         return await _analyzeWithGemini(
           imageBytes,
-          apiKey,
+          apiKey as String,
           foodBreakdown,
           language,
         );
       case AiProvider.openai:
         return await _analyzeWithOpenAI(
           imageBytes,
-          apiKey,
+          apiKey as String,
+          foodBreakdown,
+          language,
+        );
+      case AiProvider.lunos:
+        return await _analyzeWithLunos(
+          imageBytes,
+          apiKey as List<String>,
           foodBreakdown,
           language,
         );
@@ -49,13 +71,13 @@ class AiService {
   Future<AiAnalysisResponse> analyzeTextOnly({
     required String foodName,
     required AiProvider provider,
-    required String apiKey,
+    required dynamic apiKey,
     String? foodBreakdown,
     bool demoMode = false,
     ResponseLanguage language = ResponseLanguage.english,
   }) async {
     // Return demo data if no API key or demo mode enabled
-    if (demoMode || apiKey.isEmpty) {
+    if (demoMode || _isApiKeyEmpty(apiKey)) {
       // Simulate network delay
       await Future.delayed(const Duration(seconds: 2));
       return DemoDataService.getRandomDemo();
@@ -65,14 +87,21 @@ class AiService {
       case AiProvider.gemini:
         return await _analyzeTextOnlyWithGemini(
           foodName,
-          apiKey,
+          apiKey as String,
           foodBreakdown,
           language,
         );
       case AiProvider.openai:
         return await _analyzeTextOnlyWithOpenAI(
           foodName,
-          apiKey,
+          apiKey as String,
+          foodBreakdown,
+          language,
+        );
+      case AiProvider.lunos:
+        return await _analyzeTextOnlyWithLunos(
+          foodName,
+          apiKey as List<String>,
           foodBreakdown,
           language,
         );
@@ -82,12 +111,12 @@ class AiService {
   Future<DailyAnalysis> analyzeDailyNutrition({
     required DailyAnalysisRequest request,
     required AiProvider provider,
-    required String apiKey,
+    required dynamic apiKey,
     bool demoMode = false,
     ResponseLanguage language = ResponseLanguage.english,
   }) async {
     // Return demo data if no API key or demo mode enabled
-    if (demoMode || apiKey.isEmpty) {
+    if (demoMode || _isApiKeyEmpty(apiKey)) {
       // Simulate network delay
       await Future.delayed(const Duration(seconds: 3));
       return _getDemoAnalysis(request);
@@ -95,9 +124,23 @@ class AiService {
 
     switch (provider) {
       case AiProvider.gemini:
-        return await _analyzeDailyWithGemini(request, apiKey, language);
+        return await _analyzeDailyWithGemini(
+          request,
+          apiKey as String,
+          language,
+        );
       case AiProvider.openai:
-        return await _analyzeDailyWithOpenAI(request, apiKey, language);
+        return await _analyzeDailyWithOpenAI(
+          request,
+          apiKey as String,
+          language,
+        );
+      case AiProvider.lunos:
+        return await _analyzeDailyWithLunos(
+          request,
+          apiKey as List<String>,
+          language,
+        );
     }
   }
 
@@ -105,12 +148,12 @@ class AiService {
     required String message,
     required DailyAnalysis analysis,
     required AiProvider provider,
-    required String apiKey,
+    required dynamic apiKey,
     bool demoMode = false,
     ResponseLanguage language = ResponseLanguage.english,
   }) async {
     // Return demo data if no API key or demo mode enabled
-    if (demoMode || apiKey.isEmpty) {
+    if (demoMode || _isApiKeyEmpty(apiKey)) {
       // Simulate network delay
       await Future.delayed(const Duration(seconds: 2));
       return _getDemoChatResponse(message);
@@ -121,14 +164,21 @@ class AiService {
         return await _continuechatWithGemini(
           message,
           analysis,
-          apiKey,
+          apiKey as String,
           language,
         );
       case AiProvider.openai:
         return await _continueCharWithOpenAI(
           message,
           analysis,
-          apiKey,
+          apiKey as String,
+          language,
+        );
+      case AiProvider.lunos:
+        return await _continueChatWithLunos(
+          message,
+          analysis,
+          apiKey as List<String>,
           language,
         );
     }
@@ -137,11 +187,11 @@ class AiService {
   Future<AiAnalysisResponse> recalculateNutrition({
     required String updatedBreakdown,
     required AiProvider provider,
-    required String apiKey,
+    required dynamic apiKey,
     bool demoMode = false,
   }) async {
     // Return demo data if no API key or demo mode enabled
-    if (demoMode || apiKey.isEmpty) {
+    if (demoMode || _isApiKeyEmpty(apiKey)) {
       // Simulate network delay
       await Future.delayed(const Duration(seconds: 1));
       return DemoDataService.getDemoRecalculation(updatedBreakdown);
@@ -149,9 +199,14 @@ class AiService {
 
     switch (provider) {
       case AiProvider.gemini:
-        return await _recalculateWithGemini(updatedBreakdown, apiKey);
+        return await _recalculateWithGemini(updatedBreakdown, apiKey as String);
       case AiProvider.openai:
-        return await _recalculateWithOpenAI(updatedBreakdown, apiKey);
+        return await _recalculateWithOpenAI(updatedBreakdown, apiKey as String);
+      case AiProvider.lunos:
+        return await _recalculateWithLunos(
+          updatedBreakdown,
+          apiKey as List<String>,
+        );
     }
   }
 
@@ -907,5 +962,259 @@ Respond naturally as a supportive nutritionist. Provide helpful, specific advice
       isUser: false,
       timestamp: DateTime.now(),
     );
+  }
+
+  // Lunos API Methods with fallback support
+  Future<AiAnalysisResponse> _analyzeWithLunos(
+    Uint8List imageBytes,
+    List<String> apiKeys,
+    String? foodBreakdown,
+    ResponseLanguage language,
+  ) async {
+    final base64Image = base64Encode(imageBytes);
+    final prompt = _buildAnalysisPrompt(foodBreakdown, language);
+
+    return await _callLunosWithFallback(apiKeys, (apiKey) async {
+      final body = {
+        "model": "google/gemini-1.5-flash",
+        "messages": [
+          {"role": "system", "content": "You are a nutrition analysis expert."},
+          {
+            "role": "user",
+            "content": [
+              {"type": "text", "text": prompt},
+              {
+                "type": "image_url",
+                "image_url": {"url": "data:image/jpeg;base64,$base64Image"},
+              },
+            ],
+          },
+        ],
+        "temperature": 0.7,
+      };
+
+      final response = await http.post(
+        Uri.parse(_lunosBaseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final text = responseData['choices'][0]['message']['content'];
+        return _parseAiResponse(text);
+      } else {
+        throw Exception('API request failed: ${response.statusCode}');
+      }
+    });
+  }
+
+  Future<AiAnalysisResponse> _analyzeTextOnlyWithLunos(
+    String foodName,
+    List<String> apiKeys,
+    String? foodBreakdown,
+    ResponseLanguage language,
+  ) async {
+    final prompt = _buildTextOnlyAnalysisPrompt(
+      foodName,
+      foodBreakdown,
+      language,
+    );
+
+    return await _callLunosWithFallback(apiKeys, (apiKey) async {
+      final body = {
+        "model": "google/gemini-1.5-flash",
+        "messages": [
+          {"role": "system", "content": "You are a nutrition analysis expert."},
+          {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.7,
+      };
+
+      final response = await http.post(
+        Uri.parse(_lunosBaseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final text = responseData['choices'][0]['message']['content'];
+        return _parseAiResponse(text);
+      } else {
+        throw Exception('API request failed: ${response.statusCode}');
+      }
+    });
+  }
+
+  Future<DailyAnalysis> _analyzeDailyWithLunos(
+    DailyAnalysisRequest request,
+    List<String> apiKeys,
+    ResponseLanguage language,
+  ) async {
+    final prompt = _buildDailyAnalysisPrompt(request, language);
+
+    return await _callLunosWithFallback(apiKeys, (apiKey) async {
+      final body = {
+        "model": "google/gemini-1.5-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a professional nutritionist and fitness coach.",
+          },
+          {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.7,
+      };
+
+      final response = await http.post(
+        Uri.parse(_lunosBaseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final text = responseData['choices'][0]['message']['content'];
+        return _parseDailyAnalysisResponse(text);
+      } else {
+        throw Exception('API request failed: ${response.statusCode}');
+      }
+    });
+  }
+
+  Future<ChatMessage> _continueChatWithLunos(
+    String message,
+    DailyAnalysis analysis,
+    List<String> apiKeys,
+    ResponseLanguage language,
+  ) async {
+    final prompt = _buildChatPrompt(message, analysis, language);
+
+    return await _callLunosWithFallback(apiKeys, (apiKey) async {
+      final body = {
+        "model": "google/gemini-1.5-flash",
+        "messages": [
+          {"role": "system", "content": "You are a professional nutritionist."},
+          {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.7,
+      };
+
+      final response = await http.post(
+        Uri.parse(_lunosBaseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final text = responseData['choices'][0]['message']['content'];
+        return ChatMessage(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          message: text.trim(),
+          isUser: false,
+          timestamp: DateTime.now(),
+        );
+      } else {
+        throw Exception('API request failed: ${response.statusCode}');
+      }
+    });
+  }
+
+  Future<AiAnalysisResponse> _recalculateWithLunos(
+    String updatedBreakdown,
+    List<String> apiKeys,
+  ) async {
+    final prompt = _buildRecalculationPrompt(updatedBreakdown);
+
+    return await _callLunosWithFallback(apiKeys, (apiKey) async {
+      final body = {
+        "model": "google/gemini-1.5-flash",
+        "messages": [
+          {"role": "system", "content": "You are a nutrition analysis expert."},
+          {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.7,
+      };
+
+      final response = await http.post(
+        Uri.parse(_lunosBaseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final text = responseData['choices'][0]['message']['content'];
+        return _parseAiResponse(text);
+      } else {
+        throw Exception('API request failed: ${response.statusCode}');
+      }
+    });
+  }
+
+  // Generic fallback method for Lunos API calls
+  Future<T> _callLunosWithFallback<T>(
+    List<String> apiKeys,
+    Future<T> Function(String apiKey) apiCall,
+  ) async {
+    if (apiKeys.isEmpty) {
+      throw Exception('No API keys available');
+    }
+
+    Exception? lastException;
+
+    // Try each API key in sequence
+    for (int i = 0; i < apiKeys.length; i++) {
+      final keyIndex = (_currentLunosKeyIndex + i) % apiKeys.length;
+      final apiKey = apiKeys[keyIndex];
+
+      if (apiKey.isEmpty) continue;
+
+      try {
+        print('Trying Lunos API key ${keyIndex + 1}/${apiKeys.length}');
+        final result = await apiCall(apiKey);
+
+        // If successful, update the current key index for next time
+        _currentLunosKeyIndex = keyIndex;
+        return result;
+      } catch (e) {
+        print('Lunos API key ${keyIndex + 1} failed: $e');
+        lastException = e is Exception ? e : Exception(e.toString());
+
+        // Move to next key for next attempt
+        continue;
+      }
+    }
+
+    // If all keys failed, throw the last exception or return demo data
+    print('All Lunos API keys exhausted, falling back to demo data');
+
+    // Return demo data based on type T
+    if (T == AiAnalysisResponse) {
+      return DemoDataService.getRandomDemo() as T;
+    } else if (T == DailyAnalysis) {
+      return _getDemoAnalysis(null) as T;
+    } else if (T == ChatMessage) {
+      return _getDemoChatResponse('API limit reached') as T;
+    }
+
+    throw lastException ?? Exception('All API keys failed');
   }
 }

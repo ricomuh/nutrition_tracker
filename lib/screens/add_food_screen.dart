@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import '../models/nutrition_entry.dart';
 import '../models/ai_analysis_response.dart';
 import '../models/food_item.dart';
+import '../models/app_settings.dart';
 import '../providers/nutrition_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
@@ -821,7 +822,19 @@ class _AddFoodScreenState extends State<AddFoodScreen>
     }
   }
 
+  dynamic _getApiKeyForProvider(AppSettings settings) {
+    switch (settings.aiProvider) {
+      case AiProvider.gemini:
+        return settings.geminiApiKey ?? '';
+      case AiProvider.openai:
+        return settings.openaiApiKey ?? '';
+      case AiProvider.lunos:
+        return settings.lunosApiKeys;
+    }
+  }
+
   Future<void> _analyzeFood() async {
+    if (!mounted) return;
     final isPhotoTab = _tabController.index == 0;
 
     // Validate input based on tab
@@ -847,7 +860,7 @@ class _AddFoodScreenState extends State<AddFoodScreen>
         response = await _aiService.analyzeFood(
           imageBytes: _selectedImageBytes!,
           provider: settings.aiProvider,
-          apiKey: settings.currentApiKey ?? '',
+          apiKey: _getApiKeyForProvider(settings),
           foodBreakdown: _foodBreakdownController.text.isNotEmpty
               ? _foodBreakdownController.text
               : null,
@@ -863,7 +876,7 @@ class _AddFoodScreenState extends State<AddFoodScreen>
         response = await _aiService.analyzeTextOnly(
           foodName: foodDescription,
           provider: settings.aiProvider,
-          apiKey: settings.currentApiKey ?? '',
+          apiKey: _getApiKeyForProvider(settings),
           foodBreakdown: _foodBreakdownController.text.isNotEmpty
               ? _foodBreakdownController.text
               : null,

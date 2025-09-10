@@ -19,10 +19,17 @@ class SettingsService {
     return AppSettings(
       aiProvider: AiProvider.values.firstWhere(
         (e) => e.name == settingsMap['aiProvider'],
-        orElse: () => AiProvider.gemini,
+        orElse: () => AiProvider.lunos,
       ),
       geminiApiKey: settingsMap['geminiApiKey'],
       openaiApiKey: settingsMap['openaiApiKey'],
+      lunosApiKeys: settingsMap['lunosApiKeys'] != null
+          ? List<String>.from(settingsMap['lunosApiKeys'])
+          : [
+              'sk-bf085f2850bf1ecb90f8010870ec7ae9c85933ad6a0be6d1',
+              'sk-d09a43836a2ce97996e8eb808a6c480867583f71fe4b61f1',
+              // Tambahkan API key lain di sini untuk fallback
+            ],
       isFirstRun: settingsMap['isFirstRun'] ?? true,
       responseLanguage: ResponseLanguage.values.firstWhere(
         (e) => e.name == settingsMap['responseLanguage'],
@@ -37,6 +44,7 @@ class SettingsService {
       'aiProvider': settings.aiProvider.name,
       'geminiApiKey': settings.geminiApiKey,
       'openaiApiKey': settings.openaiApiKey,
+      'lunosApiKeys': settings.lunosApiKeys,
       'isFirstRun': settings.isFirstRun,
       'responseLanguage': settings.responseLanguage.name,
     };
