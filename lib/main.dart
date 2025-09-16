@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DailyAnalysisProvider()),
       ],
       child: MaterialApp(
-        title: 'Nutrition Tracker',
+        title: 'NutriFit AI',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.green,
@@ -79,19 +79,27 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.restaurant_menu,
-              size: 100,
-              color: Theme.of(context).primaryColor,
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.psychology,
+                size: 60,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 24),
             const Text(
-              'Nutrition Tracker',
+              'NutriFit AI',
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             const Text(
-              'AI-powered nutrition tracking',
+              'Smart nutrition tracking with AI',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 48),

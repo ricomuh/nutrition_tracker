@@ -39,6 +39,8 @@ class EntryDetailScreen extends StatelessWidget {
             ],
             _buildMealTypeInfo(),
             const SizedBox(height: 16),
+            _buildMealScoreSection(),
+            const SizedBox(height: 16),
             _buildNutritionSummary(),
             const SizedBox(height: 16),
             _buildFoodItemsBreakdown(),
@@ -174,6 +176,153 @@ class EntryDetailScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMealScoreSection() {
+    final score = entry.mealScore;
+    final reasoning = entry.scoreReasoning;
+
+    // Color coding based on score
+    Color scoreColor;
+    Color backgroundColor;
+    Color borderColor;
+    IconData scoreIcon;
+    String scoreLabel;
+
+    if (score >= 8) {
+      scoreColor = Colors.green[700]!;
+      backgroundColor = Colors.green.withOpacity(0.1);
+      borderColor = Colors.green.withOpacity(0.3);
+      scoreIcon = Icons.sentiment_very_satisfied;
+      scoreLabel = 'Excellent';
+    } else if (score >= 6) {
+      scoreColor = Colors.blue[700]!;
+      backgroundColor = Colors.blue.withOpacity(0.1);
+      borderColor = Colors.blue.withOpacity(0.3);
+      scoreIcon = Icons.sentiment_satisfied;
+      scoreLabel = 'Good';
+    } else if (score >= 4) {
+      scoreColor = Colors.orange[700]!;
+      backgroundColor = Colors.orange.withOpacity(0.1);
+      borderColor = Colors.orange.withOpacity(0.3);
+      scoreIcon = Icons.sentiment_neutral;
+      scoreLabel = 'Fair';
+    } else {
+      scoreColor = Colors.red[700]!;
+      backgroundColor = Colors.red.withOpacity(0.1);
+      borderColor = Colors.red.withOpacity(0.3);
+      scoreIcon = Icons.sentiment_dissatisfied;
+      scoreLabel = 'Poor';
+    }
+
+    return Card(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.star, color: scoreColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Meal Score',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: scoreColor,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scoreColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(scoreIcon, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$score/10',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              scoreLabel,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: scoreColor,
+              ),
+            ),
+            if (reasoning.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                reasoning,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                  height: 1.4,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            // Score breakdown visualization
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: List.generate(10, (index) {
+                      return Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 1),
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: index < score
+                                ? scoreColor
+                                : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  scoreLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scoreColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

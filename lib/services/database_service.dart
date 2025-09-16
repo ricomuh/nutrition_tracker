@@ -11,7 +11,7 @@ class DatabaseService {
   static Database? _database;
   static WebStorageService? _webStorage;
   static const String _databaseName = 'nutrition_tracker.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   static const String _nutritionEntriesTable = 'nutrition_entries';
 
@@ -146,6 +146,7 @@ class DatabaseService {
       path,
       version: _databaseVersion,
       onCreate: _createDatabase,
+      onUpgrade: _upgradeDatabase,
     );
   }
 
@@ -161,6 +162,8 @@ class DatabaseService {
         fiber REAL NOT NULL,
         fat REAL NOT NULL,
         comment TEXT NOT NULL,
+        meal_score INTEGER NOT NULL DEFAULT 5,
+        score_reasoning TEXT NOT NULL DEFAULT '',
         meal_type TEXT NOT NULL,
         date TEXT NOT NULL,
         image_path TEXT,
@@ -168,6 +171,22 @@ class DatabaseService {
         updated_at TEXT
       )
     ''');
+  }
+
+  Future<void> _upgradeDatabase(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      // Add meal_score and score_reasoning columns for version 2
+      await db.execute('''
+        ALTER TABLE $_nutritionEntriesTable ADD COLUMN meal_score INTEGER NOT NULL DEFAULT 5
+      ''');
+      await db.execute('''
+        ALTER TABLE $_nutritionEntriesTable ADD COLUMN score_reasoning TEXT NOT NULL DEFAULT ''
+      ''');
+    }
   }
 
   Map<String, dynamic> _nutritionEntryToMap(NutritionEntry entry) {
@@ -180,6 +199,8 @@ class DatabaseService {
       'fiber': entry.fiber,
       'fat': entry.fat,
       'comment': entry.comment,
+      'meal_score': entry.mealScore,
+      'score_reasoning': entry.scoreReasoning,
       'meal_type': entry.mealType.name,
       'date': entry.date.toIso8601String(),
       'image_path': entry.imagePath,
@@ -201,6 +222,8 @@ class DatabaseService {
       fiber: map['fiber'],
       fat: map['fat'],
       comment: map['comment'],
+      mealScore: map['meal_score'] ?? 5, // Default to 5 for existing entries
+      scoreReasoning: map['score_reasoning'] ?? '', // Default to empty string
       mealType: MealType.values.firstWhere((e) => e.name == map['meal_type']),
       date: DateTime.parse(map['date']),
       imagePath: map['image_path'],

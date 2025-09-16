@@ -31,6 +31,8 @@ class NutritionEntry {
   final double fiber;
   final double fat;
   final String comment;
+  final int mealScore; // Score 1-10 based on nutrition balance and user goals
+  final String scoreReasoning; // Explanation of the score
   final MealType mealType;
   final DateTime date;
   final String? imagePath;
@@ -47,6 +49,8 @@ class NutritionEntry {
     required this.fiber,
     required this.fat,
     required this.comment,
+    required this.mealScore,
+    required this.scoreReasoning,
     required this.mealType,
     required this.date,
     this.imagePath,
@@ -102,6 +106,8 @@ class NutritionEntry {
     double? fiber,
     double? fat,
     String? comment,
+    int? mealScore,
+    String? scoreReasoning,
     MealType? mealType,
     DateTime? date,
     String? imagePath,
@@ -117,6 +123,8 @@ class NutritionEntry {
       fiber: fiber ?? this.fiber,
       fat: fat ?? this.fat,
       comment: comment ?? this.comment,
+      mealScore: mealScore ?? this.mealScore,
+      scoreReasoning: scoreReasoning ?? this.scoreReasoning,
       mealType: mealType ?? this.mealType,
       date: date ?? this.date,
       imagePath: imagePath ?? this.imagePath,

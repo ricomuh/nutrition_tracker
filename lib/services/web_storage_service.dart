@@ -41,6 +41,8 @@ class WebStorageService {
         fiber: entry.fiber,
         fat: entry.fat,
         comment: entry.comment,
+        mealScore: entry.mealScore,
+        scoreReasoning: entry.scoreReasoning,
         mealType: entry.mealType,
         date: entry.date,
         imagePath: entry.imagePath,
