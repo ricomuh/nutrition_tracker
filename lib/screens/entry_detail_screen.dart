@@ -4,6 +4,7 @@ import 'dart:io';
 import '../models/nutrition_entry.dart';
 import '../models/food_item.dart';
 import '../providers/nutrition_provider.dart';
+import 'edit_food_screen.dart';
 
 class EntryDetailScreen extends StatelessWidget {
   final NutritionEntry entry;
@@ -16,6 +17,10 @@ class EntryDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(entry.foodName),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _editEntry(context),
+          ),
           IconButton(
             icon: const Icon(Icons.delete),
             onPressed: () => _showDeleteDialog(context),
@@ -468,5 +473,11 @@ class EntryDetailScreen extends StatelessWidget {
         ),
       );
     }
+  }
+
+  void _editEntry(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => EditFoodScreen(entry: entry)),
+    );
   }
 }

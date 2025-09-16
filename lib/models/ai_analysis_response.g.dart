@@ -18,6 +18,8 @@ AiAnalysisResponse _$AiAnalysisResponseFromJson(Map<String, dynamic> json) =>
       fiber: (json['fiber'] as num).toDouble(),
       fat: (json['fat'] as num).toDouble(),
       comment: json['comment'] as String,
+      mealScore: (json['mealScore'] as num).toInt(),
+      scoreReasoning: json['scoreReasoning'] as String,
     );
 
 Map<String, dynamic> _$AiAnalysisResponseToJson(AiAnalysisResponse instance) =>
@@ -30,4 +32,6 @@ Map<String, dynamic> _$AiAnalysisResponseToJson(AiAnalysisResponse instance) =>
       'fiber': instance.fiber,
       'fat': instance.fat,
       'comment': instance.comment,
+      'mealScore': instance.mealScore,
+      'scoreReasoning': instance.scoreReasoning,
     };

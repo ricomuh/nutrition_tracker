@@ -50,6 +50,9 @@ class DemoDataService {
       'fat': 28.0,
       'comment':
           'Great breakfast choice! High in protein and fiber to keep you satisfied.',
+      'mealScore': 8,
+      'scoreReasoning':
+          'High protein and fiber content with balanced macros. Good for sustained energy.',
     },
     {
       'foodName': 'Grilled Chicken Salad',
@@ -110,6 +113,9 @@ class DemoDataService {
       'fat': 16.8,
       'comment':
           'Excellent lean protein source with fresh vegetables. Perfect for a healthy lunch!',
+      'mealScore': 9,
+      'scoreReasoning':
+          'Excellent lean protein with lots of vegetables. Very nutrient-dense and low processed foods.',
     },
     {
       'foodName': 'Oatmeal with Berries',
@@ -170,6 +176,9 @@ class DemoDataService {
       'fat': 10.6,
       'comment':
           'A nutritious breakfast high in fiber and antioxidants. Great way to start your day!',
+      'mealScore': 8,
+      'scoreReasoning':
+          'High fiber and antioxidants from berries. Good complex carbs for sustained energy.',
     },
     {
       'foodName': 'Banana Smoothie',
@@ -218,6 +227,9 @@ class DemoDataService {
       'fat': 4.6,
       'comment':
           'Refreshing and protein-rich smoothie perfect for post-workout recovery!',
+      'mealScore': 7,
+      'scoreReasoning':
+          'Good protein content but high in natural sugars. Great for post-workout but moderate for regular meals.',
     },
     {
       'foodName': 'Pasta with Marinara',
@@ -266,6 +278,9 @@ class DemoDataService {
       'fat': 7.9,
       'comment':
           'Classic comfort food with good fiber content from whole grain pasta!',
+      'mealScore': 6,
+      'scoreReasoning':
+          'Decent fiber from whole grains but high in carbs and processed sauce. Moderate nutritional value.',
     },
   ];
 
@@ -296,6 +311,8 @@ class DemoDataService {
       fiber: random['fiber'].toDouble(),
       fat: random['fat'].toDouble(),
       comment: random['comment'],
+      mealScore: random['mealScore'],
+      scoreReasoning: random['scoreReasoning'],
     );
   }
 
@@ -327,6 +344,9 @@ class DemoDataService {
       fiber: (base['fiber'].toDouble() * 1.2),
       fat: (base['fat'].toDouble() * 1.2),
       comment: 'Updated portion sizes based on your input: $input',
+      mealScore: base['mealScore'],
+      scoreReasoning:
+          'Score updated based on recalculated portions: ${base['scoreReasoning']}',
     );
   }
 }

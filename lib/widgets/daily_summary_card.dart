@@ -59,38 +59,88 @@ class DailySummaryCard extends StatelessWidget {
         ? Colors.red
         : Theme.of(context).primaryColor;
 
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        final userProfile = settingsProvider.userProfile;
+        final calorieBalance = totalCalories - targetCalories;
+        final balanceStatus = _getCalorieBalanceStatus(
+          userProfile?.goal ?? Goal.maintain,
+          calorieBalance,
+        );
+
+        return Column(
           children: [
-            Text(
-              '${totalCalories.toStringAsFixed(0)} kcal',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${totalCalories.toStringAsFixed(0)} kcal',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Target: ${targetCalories.toStringAsFixed(0)}',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
             ),
-            Text(
-              'Target: ${targetCalories.toStringAsFixed(0)}',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: progress.clamp(0.0, 1.0),
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isOverTarget
+                      ? '${(-remaining).toStringAsFixed(0)} kcal over'
+                      : '${remaining.toStringAsFixed(0)} kcal remaining',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isOverTarget ? Colors.red : Colors.grey[600],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getBalanceColor(
+                      userProfile?.goal ?? Goal.maintain,
+                      calorieBalance,
+                    ).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getBalanceColor(
+                        userProfile?.goal ?? Goal.maintain,
+                        calorieBalance,
+                      ),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    balanceStatus,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: _getBalanceColor(
+                        userProfile?.goal ?? Goal.maintain,
+                        calorieBalance,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
-        const SizedBox(height: 8),
-        LinearProgressIndicator(
-          value: progress.clamp(0.0, 1.0),
-          backgroundColor: Colors.grey[300],
-          valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          isOverTarget
-              ? '${(-remaining).toStringAsFixed(0)} kcal over target'
-              : '${remaining.toStringAsFixed(0)} kcal remaining',
-          style: TextStyle(
-            fontSize: 12,
-            color: isOverTarget ? Colors.red : Colors.grey[600],
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -367,5 +417,50 @@ class DailySummaryCard extends StatelessWidget {
 
   String _getFiberTarget() {
     return '25-35g'; // Standard fiber recommendation
+  }
+
+  String _getCalorieBalanceStatus(Goal goal, double balance) {
+    final absBalance = balance.abs();
+
+    switch (goal) {
+      case Goal.cutting:
+        if (balance < -100) return 'Good deficit';
+        if (balance < 0) return 'Small deficit';
+        if (balance < 100) return 'Near target';
+        return 'Over target';
+
+      case Goal.bulking:
+        if (balance > 200) return 'Good surplus';
+        if (balance > 0) return 'Small surplus';
+        if (balance > -100) return 'Near target';
+        return 'Below target';
+
+      case Goal.maintain:
+        if (absBalance < 100) return 'Perfect balance';
+        if (absBalance < 200) return 'Slight imbalance';
+        return balance > 0 ? 'Over target' : 'Under target';
+    }
+  }
+
+  Color _getBalanceColor(Goal goal, double balance) {
+    switch (goal) {
+      case Goal.cutting:
+        if (balance < -100) return Colors.green;
+        if (balance < 0) return Colors.lightGreen;
+        if (balance < 100) return Colors.orange;
+        return Colors.red;
+
+      case Goal.bulking:
+        if (balance > 200) return Colors.green;
+        if (balance > 0) return Colors.lightGreen;
+        if (balance > -100) return Colors.orange;
+        return Colors.red;
+
+      case Goal.maintain:
+        final absBalance = balance.abs();
+        if (absBalance < 100) return Colors.green;
+        if (absBalance < 200) return Colors.orange;
+        return Colors.red;
+    }
   }
 }

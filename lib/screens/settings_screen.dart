@@ -195,12 +195,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            'API keys are pre-configured with automatic fallback',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.green[600],
-                            ),
+                          Consumer<SettingsProvider>(
+                            builder: (context, settingsProvider, child) {
+                              return Text(
+                                'Round-robin load balancing with ${settingsProvider.settings.lunosApiKeys.length} API keys',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green[600],
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

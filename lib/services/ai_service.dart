@@ -15,8 +15,12 @@ class AiService {
   static const String _lunosBaseUrl =
       'https://api.lunos.tech/v1/chat/completions';
 
-  // Track current API key index for Lunos rotation
+  // Track current API key index for Lunos round-robin rotation
   int _currentLunosKeyIndex = 0;
+
+  // Track API key usage statistics for monitoring
+  final Map<String, int> _apiKeyUsageCount = {};
+  final Map<String, DateTime> _lastApiKeyUsage = {};
 
   // Helper method to check if API key is empty
   bool _isApiKeyEmpty(dynamic apiKey) {
@@ -28,6 +32,85 @@ class AiService {
     return true;
   }
 
+  // Helper method to get calorie estimation guidance based on user goal
+  String _getCalorieGuidance(String? userGoal) {
+    if (userGoal == null) return 'Use moderate calorie estimates';
+
+    switch (userGoal.toLowerCase()) {
+      case 'cutting':
+      case 'weight_loss':
+        return 'Lean towards higher calorie estimates to help user stay mindful of intake';
+      case 'bulking':
+      case 'weight_gain':
+        return 'Lean towards lower calorie estimates to encourage adequate intake';
+      case 'maintenance':
+      case 'maintain':
+        return 'Use balanced, moderate calorie estimates';
+      default:
+        return 'Use moderate calorie estimates';
+    }
+  }
+
+  String _getCalorieBalanceStatus(String goal, double balance) {
+    final absBalance = balance.abs();
+
+    switch (goal.toLowerCase()) {
+      case 'cutting':
+        if (balance < -100) return 'Good deficit for fat loss';
+        if (balance < 0) return 'Small deficit';
+        if (balance < 100) return 'Near maintenance';
+        return 'Surplus - may slow fat loss';
+
+      case 'bulking':
+        if (balance > 200) return 'Good surplus for muscle gain';
+        if (balance > 0) return 'Small surplus';
+        if (balance > -100) return 'Near maintenance';
+        return 'Deficit - may limit muscle growth';
+
+      case 'maintain':
+      default:
+        if (absBalance < 100) return 'Perfect maintenance range';
+        if (absBalance < 200) return 'Slight imbalance';
+        return balance > 0 ? 'Significant surplus' : 'Significant deficit';
+    }
+  }
+
+  String _getGoalSpecificGuidance(String goal, double balance) {
+    switch (goal.toLowerCase()) {
+      case 'cutting':
+        if (balance < -500) {
+          return 'Your deficit is quite aggressive. Consider increasing calories slightly to maintain energy levels and muscle mass.';
+        } else if (balance < -200) {
+          return 'Excellent deficit for steady fat loss while preserving muscle. This pace is sustainable long-term.';
+        } else if (balance < 0) {
+          return 'You\'re in a small deficit. Good for slow, steady fat loss with minimal muscle loss risk.';
+        } else {
+          return 'You\'re above your cutting target. Try reducing portion sizes or choosing lower-calorie alternatives tomorrow.';
+        }
+
+      case 'bulking':
+        if (balance > 500) {
+          return 'Your surplus is quite high. Consider reducing slightly to minimize fat gain while building muscle.';
+        } else if (balance > 200) {
+          return 'Perfect surplus for lean muscle growth. This range supports muscle building with minimal fat gain.';
+        } else if (balance > 0) {
+          return 'You\'re in a small surplus. Good for very lean muscle growth, though progress may be slower.';
+        } else {
+          return 'You\'re below your bulking target. Add healthy, calorie-dense foods like nuts, avocado, or quality oils.';
+        }
+
+      case 'maintain':
+      default:
+        if (balance.abs() < 100) {
+          return 'Perfect balance for weight maintenance. Your body weight should remain stable at this intake level.';
+        } else if (balance > 0) {
+          return 'Slight surplus today. Try balancing with slightly fewer calories over the next few days.';
+        } else {
+          return 'Slight deficit today. Consider adding a healthy snack or slightly larger portions tomorrow.';
+        }
+    }
+  }
+
   Future<AiAnalysisResponse> analyzeFood({
     required Uint8List imageBytes,
     required AiProvider provider,
@@ -35,6 +118,7 @@ class AiService {
     String? foodBreakdown,
     bool demoMode = false,
     ResponseLanguage language = ResponseLanguage.english,
+    String? userGoal,
   }) async {
     // Return demo data if no API key or demo mode enabled
     if (demoMode || _isApiKeyEmpty(apiKey)) {
@@ -50,6 +134,7 @@ class AiService {
           apiKey as String,
           foodBreakdown,
           language,
+          userGoal,
         );
       case AiProvider.openai:
         return await _analyzeWithOpenAI(
@@ -57,6 +142,7 @@ class AiService {
           apiKey as String,
           foodBreakdown,
           language,
+          userGoal,
         );
       case AiProvider.lunos:
         return await _analyzeWithLunos(
@@ -64,6 +150,7 @@ class AiService {
           apiKey as List<String>,
           foodBreakdown,
           language,
+          userGoal,
         );
     }
   }
@@ -75,6 +162,7 @@ class AiService {
     String? foodBreakdown,
     bool demoMode = false,
     ResponseLanguage language = ResponseLanguage.english,
+    String? userGoal,
   }) async {
     // Return demo data if no API key or demo mode enabled
     if (demoMode || _isApiKeyEmpty(apiKey)) {
@@ -90,6 +178,7 @@ class AiService {
           apiKey as String,
           foodBreakdown,
           language,
+          userGoal,
         );
       case AiProvider.openai:
         return await _analyzeTextOnlyWithOpenAI(
@@ -97,6 +186,7 @@ class AiService {
           apiKey as String,
           foodBreakdown,
           language,
+          userGoal,
         );
       case AiProvider.lunos:
         return await _analyzeTextOnlyWithLunos(
@@ -104,6 +194,7 @@ class AiService {
           apiKey as List<String>,
           foodBreakdown,
           language,
+          userGoal,
         );
     }
   }
@@ -215,11 +306,12 @@ class AiService {
     String apiKey,
     String? foodBreakdown,
     ResponseLanguage language,
+    String? userGoal,
   ) async {
     try {
       final base64Image = base64Encode(imageBytes);
 
-      final prompt = _buildAnalysisPrompt(foodBreakdown, language);
+      final prompt = _buildAnalysisPrompt(foodBreakdown, language, userGoal);
 
       final body = {
         "contents": [
@@ -260,11 +352,12 @@ class AiService {
     String apiKey,
     String? foodBreakdown,
     ResponseLanguage language,
+    String? userGoal,
   ) async {
     try {
       final base64Image = base64Encode(imageBytes);
 
-      final prompt = _buildAnalysisPrompt(foodBreakdown, language);
+      final prompt = _buildAnalysisPrompt(foodBreakdown, language, userGoal);
 
       final body = {
         "model": "gpt-4-vision-preview",
@@ -311,12 +404,14 @@ class AiService {
     String apiKey,
     String? foodBreakdown,
     ResponseLanguage language,
+    String? userGoal,
   ) async {
     try {
       final prompt = _buildTextOnlyAnalysisPrompt(
         foodName,
         foodBreakdown,
         language,
+        userGoal,
       );
 
       final body = {
@@ -355,12 +450,14 @@ class AiService {
     String apiKey,
     String? foodBreakdown,
     ResponseLanguage language,
+    String? userGoal,
   ) async {
     try {
       final prompt = _buildTextOnlyAnalysisPrompt(
         foodName,
         foodBreakdown,
         language,
+        userGoal,
       );
 
       final body = {
@@ -477,10 +574,34 @@ class AiService {
   String _buildAnalysisPrompt(
     String? foodBreakdown,
     ResponseLanguage language,
+    String? userGoal,
   ) {
+    String goalContext = '';
+    if (userGoal != null) {
+      switch (userGoal.toLowerCase()) {
+        case 'cutting':
+        case 'weight_loss':
+          goalContext =
+              'The user is cutting/losing weight, so consider higher calorie estimates and focus on satiety, protein content, and nutrient density for scoring.';
+          break;
+        case 'bulking':
+        case 'weight_gain':
+          goalContext =
+              'The user is bulking/gaining weight, so consider lower calorie estimates and focus on calorie density and protein content for scoring.';
+          break;
+        case 'maintenance':
+        case 'maintain':
+          goalContext =
+              'The user is maintaining weight, so use moderate calorie estimates and focus on balanced nutrition for scoring.';
+          break;
+      }
+    }
+
     String prompt =
         '''
 Analyze this food image and provide nutritional information. ${foodBreakdown != null ? "The user has provided this breakdown: $foodBreakdown. Use this as a guide but verify against the image." : ""}
+
+$goalContext
 
 Return ONLY a valid JSON object with this exact structure:
 {
@@ -504,13 +625,17 @@ Return ONLY a valid JSON object with this exact structure:
   "carbohydrates": number,
   "fiber": number,
   "fat": number,
-  "comment": "String - positive, encouraging comment about the meal"
+  "comment": "String - positive, encouraging comment about the meal",
+  "mealScore": number, // Score 1-10 based on nutrition balance, user goals, and meal quality
+  "scoreReasoning": "String - brief explanation of why this score was given"
 }
 
 Important:
 - Provide accurate nutritional values for each individual food item
 - The total nutrition values should be the sum of all individual items
 - Be detailed and precise with portion sizes and nutritional breakdown
+- For calorie estimation: ${_getCalorieGuidance(userGoal)}
+- Meal score (1-10): Consider nutrition balance, fiber content, protein quality, processed food ratio, and alignment with user goals
 - Provide an encouraging comment about the meal choice${LanguageService.getLanguagePrompt(language)}
 ''';
     return prompt;
@@ -520,10 +645,34 @@ Important:
     String foodName,
     String? foodBreakdown,
     ResponseLanguage language,
+    String? userGoal,
   ) {
+    String goalContext = '';
+    if (userGoal != null) {
+      switch (userGoal.toLowerCase()) {
+        case 'cutting':
+        case 'weight_loss':
+          goalContext =
+              'The user is cutting/losing weight, so consider higher calorie estimates and focus on satiety, protein content, and nutrient density for scoring.';
+          break;
+        case 'bulking':
+        case 'weight_gain':
+          goalContext =
+              'The user is bulking/gaining weight, so consider lower calorie estimates and focus on calorie density and protein content for scoring.';
+          break;
+        case 'maintenance':
+        case 'maintain':
+          goalContext =
+              'The user is maintaining weight, so use moderate calorie estimates and focus on balanced nutrition for scoring.';
+          break;
+      }
+    }
+
     String prompt =
         '''
 Analyze this food based on the name "${foodName}" and estimate nutritional information. ${foodBreakdown != null ? "The user has provided this breakdown: $foodBreakdown. Use this as additional information." : ""}
+
+$goalContext
 
 Note: This is a text-only analysis without an image, so provide your best estimate based on typical serving sizes and preparation methods.
 
@@ -549,12 +698,16 @@ Return ONLY a valid JSON object with this exact structure:
   "carbohydrates": number,
   "fiber": number,
   "fat": number,
-  "comment": "String - positive, encouraging comment about the meal with a note that this is an estimate"
+  "comment": "String - positive, encouraging comment about the meal with a note that this is an estimate",
+  "mealScore": number, // Score 1-10 based on nutrition balance, user goals, and estimated meal quality
+  "scoreReasoning": "String - brief explanation of why this score was given (mention this is estimated)"
 }
 
 Important:
 - Provide nutritional estimates for each individual food item
 - The total nutrition values should be the sum of all individual items
+- For calorie estimation: ${_getCalorieGuidance(userGoal)}
+- Meal score (1-10): Consider estimated nutrition balance, likely fiber content, protein quality, and alignment with user goals
 - Be conservative with estimates and mention in the comment that this is an estimate without visual confirmation${LanguageService.getLanguagePrompt(language)}
 ''';
     return prompt;
@@ -626,6 +779,8 @@ Important:
         'fiber',
         'fat',
         'comment',
+        'mealScore',
+        'scoreReasoning',
       ];
       for (final field in requiredFields) {
         if (!jsonData.containsKey(field)) {
@@ -825,8 +980,15 @@ Important:
     final profile = request.profile;
     final foods = request.foodItems;
 
+    // Calculate calorie balance information
+    final calorieBalance = stats.totalCalories - stats.targetCalories;
+    final balanceStatus = _getCalorieBalanceStatus(
+      profile.goal,
+      calorieBalance,
+    );
+
     return '''
-As a professional nutritionist and fitness coach, analyze this user's daily nutrition intake and provide comprehensive feedback.
+As a professional nutritionist and fitness coach, analyze this user's daily nutrition intake and provide comprehensive feedback with detailed calorie balancing insights.
 
 USER PROFILE:
 - Height: ${profile.height}cm, Weight: ${profile.weight}kg, Age: ${profile.age}, Gender: ${profile.gender}
@@ -838,24 +1000,28 @@ USER PROFILE:
 
 DAILY NUTRITION STATS:
 - Total Calories: ${stats.totalCalories} / ${stats.targetCalories}
+- Calorie Balance: ${calorieBalance > 0 ? '+' : ''}${calorieBalance.toStringAsFixed(0)} kcal (${balanceStatus})
 - Protein: ${stats.totalProtein}g (Target: ${stats.proteinTarget})
 - Carbs: ${stats.totalCarbs}g (Target: ${stats.carbsTarget})
 - Fat: ${stats.totalFat}g (Target: ${stats.fatTarget})
 - Fiber: ${stats.totalFiber}g (Target: ${stats.fiberTarget})
+
+CALORIE BALANCING CONTEXT:
+${_getGoalSpecificGuidance(profile.goal, calorieBalance)}
 
 FOODS CONSUMED TODAY:
 ${foods.map((food) => '- ${food.name} (${food.quantity} ${food.unit}): ${food.nutritions.calories} kcal, ${food.nutritions.protein}g protein, ${food.nutritions.carbohydrates}g carbs, ${food.nutritions.fat}g fat, ${food.nutritions.fiber}g fiber').join('\n')}
 
 Return ONLY a valid JSON object with this exact structure:
 {
-  "summary": "Brief daily summary highlighting main achievements and gaps (e.g., 'Today you hit your protein target (124g) but fiber intake is low (16g vs 25-35g target).')",
-  "strengths": "Highlight what they did well (e.g., 'Great job! Your protein intake is solid, supporting muscle recovery after gym sessions.')",
-  "weaknesses": "Point out deficiencies or excess (e.g., 'Fat intake is slightly high, consider reducing fried foods tomorrow.')",
-  "recommendations": "Actionable next steps (e.g., 'Tomorrow, add 1 serving of leafy greens or fruits to meet your fiber needs.')",
-  "activityIntegration": "Connect nutrition with their fitness goals (e.g., 'With a 200 kcal deficit today, you're on track for fat loss. Ensure adequate energy for your next workout.')"
+  "summary": "Brief daily summary highlighting main achievements and gaps with calorie balance emphasis (e.g., 'You maintained a 200 kcal deficit today, perfect for your cutting goal, while hitting your protein target (124g).')",
+  "strengths": "Highlight what they did well, including calorie management (e.g., 'Excellent calorie control today! Your 300 kcal deficit is ideal for sustainable fat loss, and your protein intake supports muscle retention.')",
+  "weaknesses": "Point out deficiencies or issues with balance (e.g., 'You exceeded your target by 150 kcal - consider reducing portion sizes tomorrow to stay on track with your cutting goal.')",
+  "recommendations": "Actionable next steps for calorie balancing and nutrition (e.g., 'Tomorrow, aim for 200-300 fewer calories by choosing leaner proteins and adding more vegetables to maintain your deficit.')",
+  "activityIntegration": "Connect nutrition and calorie balance with fitness goals (e.g., 'Your 250 kcal deficit today aligns perfectly with fat loss. Ensure adequate pre-workout fuel (100-150 kcal) 1-2 hours before your next gym session.')"
 }
 
-Keep the tone encouraging, professional, and actionable. Focus on practical advice aligned with their specific goals and activity level.${LanguageService.getLanguagePrompt(language)}
+Keep the tone encouraging, professional, and actionable. Focus heavily on calorie balancing relative to their specific goals and provide practical advice for achieving the right energy balance.${LanguageService.getLanguagePrompt(language)}
 ''';
   }
 
@@ -970,9 +1136,10 @@ Respond naturally as a supportive nutritionist. Provide helpful, specific advice
     List<String> apiKeys,
     String? foodBreakdown,
     ResponseLanguage language,
+    String? userGoal,
   ) async {
     final base64Image = base64Encode(imageBytes);
-    final prompt = _buildAnalysisPrompt(foodBreakdown, language);
+    final prompt = _buildAnalysisPrompt(foodBreakdown, language, userGoal);
 
     return await _callLunosWithFallback(apiKeys, (apiKey) async {
       final body = {
@@ -1017,11 +1184,13 @@ Respond naturally as a supportive nutritionist. Provide helpful, specific advice
     List<String> apiKeys,
     String? foodBreakdown,
     ResponseLanguage language,
+    String? userGoal,
   ) async {
     final prompt = _buildTextOnlyAnalysisPrompt(
       foodName,
       foodBreakdown,
       language,
+      userGoal,
     );
 
     return await _callLunosWithFallback(apiKeys, (apiKey) async {
@@ -1169,7 +1338,7 @@ Respond naturally as a supportive nutritionist. Provide helpful, specific advice
     });
   }
 
-  // Generic fallback method for Lunos API calls
+  // Round-robin method for Lunos API calls with intelligent fallback
   Future<T> _callLunosWithFallback<T>(
     List<String> apiKeys,
     Future<T> Function(String apiKey) apiCall,
@@ -1178,33 +1347,63 @@ Respond naturally as a supportive nutritionist. Provide helpful, specific advice
       throw Exception('No API keys available');
     }
 
+    final validKeys = apiKeys.where((key) => key.isNotEmpty).toList();
+    if (validKeys.isEmpty) {
+      throw Exception('No valid API keys available');
+    }
+
     Exception? lastException;
 
-    // Try each API key in sequence
-    for (int i = 0; i < apiKeys.length; i++) {
-      final keyIndex = (_currentLunosKeyIndex + i) % apiKeys.length;
-      final apiKey = apiKeys[keyIndex];
+    // First try: Use round-robin to select the next key
+    final primaryKeyIndex = _currentLunosKeyIndex % validKeys.length;
+    final primaryKey = validKeys[primaryKeyIndex];
 
-      if (apiKey.isEmpty) continue;
+    try {
+      print(
+        'Using Lunos API key ${primaryKeyIndex + 1}/${validKeys.length} (round-robin)',
+      );
+      final result = await apiCall(primaryKey);
+
+      // Track successful usage
+      _recordApiKeyUsage(primaryKey);
+
+      // Successful - move to next key for round-robin distribution
+      _currentLunosKeyIndex = (primaryKeyIndex + 1) % validKeys.length;
+      return result;
+    } catch (e) {
+      print('Primary Lunos API key ${primaryKeyIndex + 1} failed: $e');
+      lastException = e is Exception ? e : Exception(e.toString());
+    }
+
+    // Fallback: Try remaining keys if primary key fails
+    print('Falling back to remaining API keys...');
+    for (int i = 1; i < validKeys.length; i++) {
+      final fallbackKeyIndex = (primaryKeyIndex + i) % validKeys.length;
+      final fallbackKey = validKeys[fallbackKeyIndex];
 
       try {
-        print('Trying Lunos API key ${keyIndex + 1}/${apiKeys.length}');
-        final result = await apiCall(apiKey);
+        print(
+          'Trying fallback Lunos API key ${fallbackKeyIndex + 1}/${validKeys.length}',
+        );
+        final result = await apiCall(fallbackKey);
 
-        // If successful, update the current key index for next time
-        _currentLunosKeyIndex = keyIndex;
+        // Track successful usage
+        _recordApiKeyUsage(fallbackKey);
+
+        // If fallback succeeds, update round-robin to continue from next key
+        _currentLunosKeyIndex = (fallbackKeyIndex + 1) % validKeys.length;
         return result;
       } catch (e) {
-        print('Lunos API key ${keyIndex + 1} failed: $e');
+        print('Fallback Lunos API key ${fallbackKeyIndex + 1} failed: $e');
         lastException = e is Exception ? e : Exception(e.toString());
-
-        // Move to next key for next attempt
         continue;
       }
     }
 
     // If all keys failed, throw the last exception or return demo data
-    print('All Lunos API keys exhausted, falling back to demo data');
+    print(
+      'All ${validKeys.length} Lunos API keys exhausted, falling back to demo data',
+    );
 
     // Return demo data based on type T
     if (T == AiAnalysisResponse) {
@@ -1216,5 +1415,56 @@ Respond naturally as a supportive nutritionist. Provide helpful, specific advice
     }
 
     throw lastException ?? Exception('All API keys failed');
+  }
+
+  // Helper method to record API key usage for monitoring
+  void _recordApiKeyUsage(String apiKey) {
+    final keyId = _maskApiKey(apiKey);
+    _apiKeyUsageCount[keyId] = (_apiKeyUsageCount[keyId] ?? 0) + 1;
+    _lastApiKeyUsage[keyId] = DateTime.now();
+  }
+
+  // Helper method to mask API key for logging (show only first 8 and last 4 characters)
+  String _maskApiKey(String apiKey) {
+    if (apiKey.length <= 12)
+      return apiKey.replaceRange(4, apiKey.length - 4, '...');
+    return '${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}';
+  }
+
+  // Get API key usage statistics for debugging/monitoring
+  Map<String, Map<String, dynamic>> getApiKeyStats() {
+    final stats = <String, Map<String, dynamic>>{};
+
+    for (final keyId in _apiKeyUsageCount.keys) {
+      stats[keyId] = {
+        'usageCount': _apiKeyUsageCount[keyId] ?? 0,
+        'lastUsed': _lastApiKeyUsage[keyId]?.toIso8601String(),
+      };
+    }
+
+    return stats;
+  }
+
+  // Reset round-robin rotation (useful for testing or rebalancing)
+  void resetRoundRobin() {
+    _currentLunosKeyIndex = 0;
+    print('Lunos API key round-robin rotation reset');
+  }
+
+  // Get current round-robin status
+  Map<String, dynamic> getRoundRobinStatus(List<String> apiKeys) {
+    final validKeys = apiKeys.where((key) => key.isNotEmpty).toList();
+    return {
+      'currentIndex': _currentLunosKeyIndex,
+      'totalKeys': validKeys.length,
+      'currentKey': validKeys.isNotEmpty
+          ? _maskApiKey(validKeys[_currentLunosKeyIndex % validKeys.length])
+          : 'No valid keys',
+      'nextKey': validKeys.length > 1
+          ? _maskApiKey(
+              validKeys[(_currentLunosKeyIndex + 1) % validKeys.length],
+            )
+          : 'Only one key available',
+    };
   }
 }

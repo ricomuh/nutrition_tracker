@@ -7,6 +7,7 @@ import '../models/nutrition_entry.dart';
 import '../widgets/daily_summary_card.dart';
 import '../widgets/meal_section.dart';
 import 'add_food_screen.dart';
+import 'edit_food_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final DateTime? selectedDate;
@@ -249,10 +250,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _editEntry(NutritionEntry entry) {
-    // TODO: Implement edit entry functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit functionality coming soon!')),
-    );
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(builder: (context) => EditFoodScreen(entry: entry)),
+        )
+        .then((_) {
+          // Reload data after editing to show updated values
+          _loadData();
+        });
   }
 
   void _deleteEntry(NutritionEntry entry) {

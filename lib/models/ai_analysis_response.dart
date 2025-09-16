@@ -13,6 +13,8 @@ class AiAnalysisResponse {
   final double fiber;
   final double fat;
   final String comment;
+  final int mealScore; // Score 1-10 based on nutrition balance and user goals
+  final String scoreReasoning; // Explanation of the score
 
   const AiAnalysisResponse({
     required this.foodName,
@@ -23,6 +25,8 @@ class AiAnalysisResponse {
     required this.fiber,
     required this.fat,
     required this.comment,
+    required this.mealScore,
+    required this.scoreReasoning,
   });
 
   factory AiAnalysisResponse.fromJson(Map<String, dynamic> json) =>

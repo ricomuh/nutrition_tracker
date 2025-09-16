@@ -67,7 +67,7 @@ class UserProfile {
   double get bmi => weight / ((height / 100) * (height / 100));
 
   double get tdee {
-    // Mifflin-St Jeor equation with accurate gender and age
+    // Mifflin-St Jeor equation for BMR calculation
     double bmr;
     if (gender == Gender.male) {
       bmr = 10 * weight + 6.25 * height - 5 * age + 5;
@@ -75,24 +75,42 @@ class UserProfile {
       bmr = 10 * weight + 6.25 * height - 5 * age - 161;
     }
 
-    // Activity factor
+    // Activity factor based on activity level and exercise frequency
     double activityFactor;
     switch (activityLevel) {
       case ActivityLevel.light:
-        activityFactor = 1.2;
+        // Sedentary (desk job) with varying exercise frequency
+        if (exerciseFrequency <= 1) {
+          activityFactor = 1.2; // Little to no exercise
+        } else if (exerciseFrequency <= 3) {
+          activityFactor = 1.375; // Light exercise 1-3x/week
+        } else {
+          activityFactor = 1.55; // Moderate exercise 3-5x/week
+        }
         break;
       case ActivityLevel.moderate:
-        activityFactor = 1.55;
+        // Moderate activity (some standing/walking) with exercise
+        if (exerciseFrequency <= 2) {
+          activityFactor = 1.375; // Light exercise
+        } else if (exerciseFrequency <= 4) {
+          activityFactor = 1.55; // Moderate exercise 3-5x/week
+        } else {
+          activityFactor = 1.725; // Heavy exercise 6-7x/week
+        }
         break;
       case ActivityLevel.heavy:
-        activityFactor = 1.9;
+        // Very active (physical job) with exercise
+        if (exerciseFrequency <= 3) {
+          activityFactor = 1.55; // Moderate exercise
+        } else if (exerciseFrequency <= 5) {
+          activityFactor = 1.725; // Heavy exercise 6-7x/week
+        } else {
+          activityFactor = 1.9; // Very heavy exercise or 2x training
+        }
         break;
     }
 
-    // Exercise factor
-    double exerciseFactor = 1.0 + (exerciseFrequency * 0.1);
-
-    return bmr * activityFactor * exerciseFactor;
+    return bmr * activityFactor;
   }
 
   double get targetCalories => tdee + calorieAdjustment;
