@@ -13,6 +13,7 @@ import '../providers/nutrition_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/full_screen_image_viewer.dart';
 
 class AddFoodScreen extends StatefulWidget {
   final DateTime selectedDate;
@@ -232,29 +233,60 @@ class _AddFoodScreenState extends State<AddFoodScreen>
         ),
         const SizedBox(height: 8),
         if (_selectedImageBytes != null)
-          Container(
-            width: double.infinity,
-            height: 200,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              image: DecorationImage(
-                image: kIsWeb
-                    ? MemoryImage(_selectedImageBytes!)
-                    : FileImage(_selectedImage!),
-                fit: BoxFit.cover,
+          GestureDetector(
+            onTap: () => _openImageViewer(),
+            child: Hero(
+              tag: 'add_food_image',
+              child: Container(
+                width: double.infinity,
+                height: 200,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  image: DecorationImage(
+                    image: kIsWeb
+                        ? MemoryImage(_selectedImageBytes!)
+                        : FileImage(_selectedImage!),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    if (isInputDisabled)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.black.withOpacity(0.3),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.lock,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
+                      ),
+                    // Add a subtle indicator that the image is clickable
+                    if (!isInputDisabled)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.fullscreen,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-            child: isInputDisabled
-                ? Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.black.withOpacity(0.3),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.lock, color: Colors.white, size: 40),
-                    ),
-                  )
-                : null,
           )
         else
           Container(
@@ -471,6 +503,9 @@ class _AddFoodScreenState extends State<AddFoodScreen>
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            // Calorie Progress Preview
+            _buildCalorieProgressPreview(),
             const SizedBox(height: 20),
             // Food Name and Items
             Container(
@@ -787,6 +822,218 @@ class _AddFoodScreenState extends State<AddFoodScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildCalorieProgressPreview() {
+    final nutritionProvider = context.read<NutritionProvider>();
+    final settingsProvider = context.read<SettingsProvider>();
+
+    // Get today's current calories
+    final today = DateTime.now();
+    final todayEntries = nutritionProvider.getEntriesForDate(today);
+    final currentCalories = todayEntries.fold<double>(
+      0,
+      (sum, entry) => sum + entry.calories,
+    );
+
+    // Get target calories
+    final userProfile = settingsProvider.userProfile;
+    final targetCalories = userProfile?.tdee ?? 2000;
+
+    // Calculate projected calories (current + this food)
+    final analyzedCalories = _aiResponse?.calories ?? 0;
+    final projectedCalories = currentCalories + analyzedCalories;
+
+    // Calculate progress percentages
+    final currentProgress = targetCalories > 0
+        ? currentCalories / targetCalories
+        : 0.0;
+    final projectedProgress = targetCalories > 0
+        ? projectedCalories / targetCalories
+        : 0.0;
+
+    // Determine colors
+    final currentColor = Theme.of(context).primaryColor;
+    final projectedColor = projectedProgress > 1.0 ? Colors.red : Colors.orange;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.green.withOpacity(0.05),
+            Colors.blue.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.trending_up, color: Colors.green[700], size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Calorie Impact Preview',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Current calories progress
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Current: ${currentCalories.toStringAsFixed(0)} kcal',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '${(currentProgress * 100).toStringAsFixed(0)}% of target',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: currentProgress.clamp(0.0, 1.0),
+            backgroundColor: Colors.grey[300],
+            valueColor: AlwaysStoppedAnimation<Color>(currentColor),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Projected calories progress
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'After adding: ${projectedCalories.toStringAsFixed(0)} kcal',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '${(projectedProgress * 100).toStringAsFixed(0)}% of target',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Stacked progress bar showing current + projected
+          SizedBox(
+            height: 8,
+            child: Stack(
+              children: [
+                // Background
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                // Current calories bar
+                FractionallySizedBox(
+                  widthFactor: currentProgress.clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: currentColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                // Projected addition bar
+                FractionallySizedBox(
+                  widthFactor: projectedProgress.clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [currentColor, projectedColor],
+                        stops: [currentProgress.clamp(0.0, 1.0), 1.0],
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Impact summary
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: projectedProgress > 1.0
+                  ? Colors.red.withOpacity(0.1)
+                  : Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: projectedProgress > 1.0
+                    ? Colors.red.withOpacity(0.3)
+                    : Colors.green.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  projectedProgress > 1.0 ? Icons.warning : Icons.check_circle,
+                  color: projectedProgress > 1.0
+                      ? Colors.red[700]
+                      : Colors.green[700],
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    projectedProgress > 1.0
+                        ? 'Adding this food will exceed your daily target by ${(projectedCalories - targetCalories).toStringAsFixed(0)} kcal'
+                        : 'Adding this food will leave you ${(targetCalories - projectedCalories).toStringAsFixed(0)} kcal under your target',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: projectedProgress > 1.0
+                          ? Colors.red[700]
+                          : Colors.green[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openImageViewer() {
+    if (_selectedImageBytes != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => FullScreenImageViewer(
+            imageBytes: _selectedImageBytes,
+            imagePath: !kIsWeb ? _selectedImage?.path : null,
+            heroTag: 'add_food_image',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _pickImage(ImageSource source) async {

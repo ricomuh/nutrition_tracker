@@ -4,6 +4,7 @@ import 'dart:io';
 import '../models/nutrition_entry.dart';
 import '../models/food_item.dart';
 import '../providers/nutrition_provider.dart';
+import '../widgets/full_screen_image_viewer.dart';
 import 'edit_food_screen.dart';
 
 class EntryDetailScreen extends StatelessWidget {
@@ -54,45 +55,93 @@ class EntryDetailScreen extends StatelessWidget {
   }
 
   Widget _buildImageSection() {
-    return Container(
-      width: double.infinity,
-      height: 200,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.file(
-          File(entry.imagePath!),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: Colors.grey[200],
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.broken_image, color: Colors.grey, size: 48),
-                    SizedBox(height: 8),
-                    Text(
-                      'Image not available',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
+    return Builder(
+      builder: (context) => GestureDetector(
+        onTap: () => _openImageViewer(context),
+        child: Hero(
+          tag: 'entry_detail_image_${entry.id}',
+          child: Container(
+            width: double.infinity,
+            height: 200,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                children: [
+                  Image.file(
+                    File(entry.imagePath!),
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.broken_image,
+                                color: Colors.grey,
+                                size: 48,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Image not available',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  // Add fullscreen indicator
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.fullscreen,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  void _openImageViewer(BuildContext context) {
+    if (entry.imagePath != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => FullScreenImageViewer(
+            imagePath: entry.imagePath,
+            heroTag: 'entry_detail_image_${entry.id}',
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildMealTypeInfo() {
