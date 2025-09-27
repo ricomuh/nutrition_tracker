@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:gal/gal.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -104,36 +103,33 @@ class FullScreenImageViewer extends StatelessWidget {
     try {
       // Request storage permission
       if (Platform.isAndroid) {
-        final permission = await Permission.storage.request();
-        if (!permission.isGranted) {
-          _showSnackBar(
-            context,
-            'Storage permission is required to save images',
-            isError: true,
-          );
-          return;
+        final hasPermission = await Gal.hasAccess();
+        if (!hasPermission) {
+          final granted = await Gal.requestAccess();
+          if (!granted) {
+            _showSnackBar(
+              context,
+              'Storage permission is required to save images',
+              isError: true,
+            );
+            return;
+          }
         }
       }
 
       // Save the image
-      var result;
       if (imageBytes != null) {
-        result = await ImageGallerySaver.saveImage(imageBytes!);
+        await Gal.putImageBytes(imageBytes!);
+        _showSnackBar(context, 'Image saved to gallery successfully!');
       } else if (imagePath != null && !kIsWeb) {
         final file = File(imagePath!);
         if (await file.exists()) {
-          final bytes = await file.readAsBytes();
-          result = await ImageGallerySaver.saveImage(bytes);
+          await Gal.putImage(imagePath!);
+          _showSnackBar(context, 'Image saved to gallery successfully!');
         } else {
           _showSnackBar(context, 'Image file not found', isError: true);
           return;
         }
-      }
-
-      if (result['isSuccess'] == true) {
-        _showSnackBar(context, 'Image saved to gallery successfully!');
-      } else {
-        _showSnackBar(context, 'Failed to save image', isError: true);
       }
     } catch (e) {
       _showSnackBar(context, 'Error saving image: $e', isError: true);

@@ -25,7 +25,7 @@ dependencies:
   # Image handling
   image_picker: ^1.0.4
   permission_handler: ^11.1.0
-  image_gallery_saver: ^2.0.3
+  gal: ^2.3.0
 
   # UI & State Management
   provider: ^6.1.1
