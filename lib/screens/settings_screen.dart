@@ -132,7 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Text('Response Language'),
             const SizedBox(height: 8),
             DropdownButtonFormField<ResponseLanguage>(
-              value: _selectedLanguage,
+              initialValue: _selectedLanguage,
               decoration: const InputDecoration(border: OutlineInputBorder()),
               items: ResponseLanguage.values.map((language) {
                 return DropdownMenuItem(
@@ -277,7 +277,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Text('Gender'),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<Gender>(
-                        value: _gender,
+                        initialValue: _gender,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                         ),

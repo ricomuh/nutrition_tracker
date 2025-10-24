@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NutriFit AI</string>
+    <string name="daily_summary_widget_description">Shows your daily nutrition progress including calories, protein, carbs, and fat intake</string>
+    <string name="quick_camera_widget_description">Quick access to food scanning camera for instant nutrition analysis</string>
+</resources>

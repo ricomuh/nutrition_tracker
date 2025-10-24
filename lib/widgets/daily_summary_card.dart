@@ -87,11 +87,10 @@ class DailySummaryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: progress.clamp(0.0, 1.0),
-              backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-            ),
+
+            // TDEE-aware progress bar
+            _buildTDEEAwareProgressBar(userProfile, progressColor),
+
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -138,9 +137,176 @@ class DailySummaryCard extends StatelessWidget {
                 ),
               ],
             ),
+
+            // TDEE status indicator
+            if (userProfile != null) ...[
+              const SizedBox(height: 8),
+              _buildTDEEStatusIndicator(userProfile),
+            ],
           ],
         );
       },
+    );
+  }
+
+  Widget _buildTDEEAwareProgressBar(
+    UserProfile? userProfile,
+    Color progressColor,
+  ) {
+    if (userProfile == null) {
+      // Fallback to simple progress bar
+      return LinearProgressIndicator(
+        value: (totalCalories / targetCalories).clamp(0.0, 1.0),
+        backgroundColor: Colors.grey[300],
+        valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+      );
+    }
+
+    final tdee = userProfile.tdee;
+    final maxDisplayCalories =
+        [tdee, targetCalories, totalCalories].reduce((a, b) => a > b ? a : b) *
+        1.1;
+
+    final tdeeProgress = tdee / maxDisplayCalories;
+    final targetProgress = targetCalories / maxDisplayCalories;
+    final currentProgress = (totalCalories / maxDisplayCalories).clamp(
+      0.0,
+      1.0,
+    );
+
+    return SizedBox(
+      height: 12,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+
+          return Stack(
+            children: [
+              // Background
+              Container(
+                width: width,
+                height: 12,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  color: Colors.grey[300],
+                ),
+              ),
+
+              // Current calories bar
+              Container(
+                width: width * currentProgress,
+                height: 12,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  color: progressColor,
+                ),
+              ),
+
+              // TDEE marker line
+              Positioned(
+                left: width * tdeeProgress - 1,
+                top: 0,
+                child: Container(
+                  width: 2,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+              ),
+
+              // Target marker line
+              Positioned(
+                left: width * targetProgress - 1,
+                top: 0,
+                child: Container(
+                  width: 2,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTDEEStatusIndicator(UserProfile userProfile) {
+    final tdee = userProfile.tdee;
+    final tdeeBalance = totalCalories - tdee;
+    final goal = userProfile.goal;
+
+    String statusText;
+    Color statusColor;
+    IconData statusIcon;
+
+    if (tdeeBalance.abs() < 50) {
+      statusText = 'At TDEE (${tdee.toInt()})';
+      statusColor = Colors.blue;
+      statusIcon = Icons.balance;
+    } else if (tdeeBalance > 0) {
+      statusText = 'Above TDEE (+${tdeeBalance.toInt()})';
+      statusColor = goal == Goal.bulking ? Colors.green : Colors.orange;
+      statusIcon = goal == Goal.bulking ? Icons.trending_up : Icons.warning;
+    } else {
+      statusText = 'Below TDEE (${tdeeBalance.toInt()})';
+      statusColor = goal == Goal.cutting ? Colors.green : Colors.orange;
+      statusIcon = goal == Goal.cutting ? Icons.trending_down : Icons.warning;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(statusIcon, size: 14, color: statusColor),
+          const SizedBox(width: 6),
+          Text(
+            statusText,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: statusColor,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Legend indicators
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text('TDEE', style: TextStyle(fontSize: 9, color: Colors.grey[600])),
+          const SizedBox(width: 8),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Target',
+            style: TextStyle(fontSize: 9, color: Colors.grey[600]),
+          ),
+        ],
+      ),
     );
   }
 

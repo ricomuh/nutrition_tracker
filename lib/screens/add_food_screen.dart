@@ -69,6 +69,12 @@ class _AddFoodScreenState extends State<AddFoodScreen>
     _foodNameController.addListener(() {
       setState(() {});
     });
+
+    // Add listener to tab changes to preserve analysis results
+    _tabController.addListener(() {
+      // No need to clear analysis when switching tabs
+      setState(() {});
+    });
   }
 
   @override
@@ -154,7 +160,7 @@ class _AddFoodScreenState extends State<AddFoodScreen>
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<MealType>(
-          value: _selectedMealType,
+          initialValue: _selectedMealType,
           decoration: const InputDecoration(border: OutlineInputBorder()),
           items: MealType.values.map((mealType) {
             return DropdownMenuItem(
@@ -1232,8 +1238,9 @@ class _AddFoodScreenState extends State<AddFoodScreen>
     if (isPhotoTab && _selectedImageBytes == null) return;
     if (!isPhotoTab &&
         _foodNameController.text.isEmpty &&
-        _foodBreakdownController.text.isEmpty)
+        _foodBreakdownController.text.isEmpty) {
       return;
+    }
 
     setState(() {
       _isAnalyzing = true;
@@ -1402,12 +1409,8 @@ class _AddFoodScreenState extends State<AddFoodScreen>
       await nutritionProvider.addEntry(entry);
 
       if (mounted) {
-        // Clear the form but keep meal type selected
-        _resetAnalysis();
-        _selectedImage = null;
-        _selectedImageBytes = null;
-        _aiResponse = null;
-        // Don't reset _selectedMealType so user can add more food to same meal
+        // Reset all form data after successful save
+        _resetAllData();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Food entry saved successfully!')),
@@ -1421,6 +1424,26 @@ class _AddFoodScreenState extends State<AddFoodScreen>
     } catch (e) {
       _showErrorMessage('Error saving entry: $e');
     }
+  }
+
+  void _resetAllData() {
+    setState(() {
+      // Reset analysis data
+      _aiResponse = null;
+      _showRevisionField = false;
+
+      // Reset image data
+      _selectedImage = null;
+      _selectedImageBytes = null;
+
+      // Reset controllers
+      _foodBreakdownController.clear();
+      _revisionController.clear();
+      _foodNameController.clear();
+
+      // Reset meal type to current time
+      _selectedMealType = NutritionEntry.getMealTypeFromTime(DateTime.now());
+    });
   }
 
   void _showPermissionDeniedMessage(String permission) {

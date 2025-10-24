@@ -11,6 +11,9 @@ class NutritionProvider extends ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
 
+  // Callback for when data changes (for app lifecycle provider)
+  VoidCallback? _onDataChanged;
+
   List<NutritionEntry> get entries => _entries;
   Map<String, double> get dailyTotals => _dailyTotals;
   DateTime get selectedDate => _selectedDate;
@@ -21,6 +24,10 @@ class NutritionProvider extends ChangeNotifier {
   double get totalCarbohydrates => _dailyTotals['carbohydrates'] ?? 0;
   double get totalFiber => _dailyTotals['fiber'] ?? 0;
   double get totalFat => _dailyTotals['fat'] ?? 0;
+
+  void setOnDataChanged(VoidCallback? callback) {
+    _onDataChanged = callback;
+  }
 
   Future<void> loadEntriesForDate(DateTime date) async {
     _isLoading = true;
@@ -47,6 +54,9 @@ class NutritionProvider extends ChangeNotifier {
       _entries.add(newEntry);
       await _updateDailyTotals();
       notifyListeners();
+
+      // Notify app lifecycle provider of data change
+      _onDataChanged?.call();
     } catch (e) {
       debugPrint('Error adding entry: $e');
       rethrow;
@@ -63,6 +73,9 @@ class NutritionProvider extends ChangeNotifier {
         _entries[index] = entry;
         await _updateDailyTotals();
         notifyListeners();
+
+        // Notify app lifecycle provider of data change
+        _onDataChanged?.call();
       }
     } catch (e) {
       debugPrint('Error updating entry: $e');

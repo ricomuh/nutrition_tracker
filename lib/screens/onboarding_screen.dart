@@ -171,7 +171,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const Text('Gender'),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<Gender>(
-                      value: _gender,
+                      initialValue: _gender,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                       ),

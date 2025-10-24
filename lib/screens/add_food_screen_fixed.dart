@@ -91,7 +91,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<MealType>(
-          value: _selectedMealType,
+          initialValue: _selectedMealType,
           decoration: const InputDecoration(border: OutlineInputBorder()),
           items: MealType.values.map((mealType) {
             return DropdownMenuItem(

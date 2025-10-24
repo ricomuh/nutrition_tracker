@@ -17,7 +17,7 @@ class MonthlyStatsScreen extends StatefulWidget {
 class _MonthlyStatsScreenState extends State<MonthlyStatsScreen> {
   DateTime _selectedMonth = DateTime.now();
   Map<String, double> _monthlyAverages = {};
-  List<Map<String, dynamic>> _dailyData = [];
+  final List<Map<String, dynamic>> _dailyData = [];
   bool _isLoading = true;
 
   @override

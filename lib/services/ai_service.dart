@@ -127,32 +127,75 @@ class AiService {
       return DemoDataService.getRandomDemo();
     }
 
-    switch (provider) {
-      case AiProvider.gemini:
-        return await _analyzeWithGemini(
-          imageBytes,
-          apiKey as String,
-          foodBreakdown,
-          language,
-          userGoal,
-        );
-      case AiProvider.openai:
-        return await _analyzeWithOpenAI(
-          imageBytes,
-          apiKey as String,
-          foodBreakdown,
-          language,
-          userGoal,
-        );
-      case AiProvider.lunos:
-        return await _analyzeWithLunos(
-          imageBytes,
-          apiKey as List<String>,
-          foodBreakdown,
-          language,
-          userGoal,
-        );
+    // Retry mechanism for invalid JSON responses
+    const maxRetries = 3;
+    Exception? lastException;
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        AiAnalysisResponse response;
+
+        switch (provider) {
+          case AiProvider.gemini:
+            response = await _analyzeWithGemini(
+              imageBytes,
+              apiKey as String,
+              foodBreakdown,
+              language,
+              userGoal,
+            );
+            break;
+          case AiProvider.openai:
+            response = await _analyzeWithOpenAI(
+              imageBytes,
+              apiKey as String,
+              foodBreakdown,
+              language,
+              userGoal,
+            );
+            break;
+          case AiProvider.lunos:
+            response = await _analyzeWithLunos(
+              imageBytes,
+              apiKey as List<String>,
+              foodBreakdown,
+              language,
+              userGoal,
+            );
+            break;
+        }
+
+        // If we get here, the response was parsed successfully
+        return response;
+      } catch (e) {
+        lastException = e is Exception ? e : Exception(e.toString());
+        print('Attempt $attempt failed: $e');
+
+        // If this was a parsing error and we have more attempts, try again
+        if (attempt < maxRetries && e.toString().contains('JSON')) {
+          print(
+            'Retrying due to JSON parsing error (attempt ${attempt + 1}/$maxRetries)',
+          );
+          await Future.delayed(Duration(seconds: attempt)); // Progressive delay
+          continue;
+        } else {
+          break; // Don't retry for non-JSON errors or on last attempt
+        }
+      }
     }
+
+    // If all attempts failed, check if it's an API limit error
+    if (lastException.toString().contains('limit') ||
+        lastException.toString().contains('quota') ||
+        lastException.toString().contains('429')) {
+      throw Exception(
+        'AI service limit reached. Please try again later or upgrade your plan.',
+      );
+    }
+
+    // Otherwise throw the original error
+    throw lastException ??
+        Exception('Analysis failed after $maxRetries attempts');
   }
 
   Future<AiAnalysisResponse> analyzeTextOnly({
@@ -171,32 +214,75 @@ class AiService {
       return DemoDataService.getRandomDemo();
     }
 
-    switch (provider) {
-      case AiProvider.gemini:
-        return await _analyzeTextOnlyWithGemini(
-          foodName,
-          apiKey as String,
-          foodBreakdown,
-          language,
-          userGoal,
-        );
-      case AiProvider.openai:
-        return await _analyzeTextOnlyWithOpenAI(
-          foodName,
-          apiKey as String,
-          foodBreakdown,
-          language,
-          userGoal,
-        );
-      case AiProvider.lunos:
-        return await _analyzeTextOnlyWithLunos(
-          foodName,
-          apiKey as List<String>,
-          foodBreakdown,
-          language,
-          userGoal,
-        );
+    // Retry mechanism for invalid JSON responses
+    const maxRetries = 3;
+    Exception? lastException;
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        AiAnalysisResponse response;
+
+        switch (provider) {
+          case AiProvider.gemini:
+            response = await _analyzeTextOnlyWithGemini(
+              foodName,
+              apiKey as String,
+              foodBreakdown,
+              language,
+              userGoal,
+            );
+            break;
+          case AiProvider.openai:
+            response = await _analyzeTextOnlyWithOpenAI(
+              foodName,
+              apiKey as String,
+              foodBreakdown,
+              language,
+              userGoal,
+            );
+            break;
+          case AiProvider.lunos:
+            response = await _analyzeTextOnlyWithLunos(
+              foodName,
+              apiKey as List<String>,
+              foodBreakdown,
+              language,
+              userGoal,
+            );
+            break;
+        }
+
+        // If we get here, the response was parsed successfully
+        return response;
+      } catch (e) {
+        lastException = e is Exception ? e : Exception(e.toString());
+        print('Attempt $attempt failed: $e');
+
+        // If this was a parsing error and we have more attempts, try again
+        if (attempt < maxRetries && e.toString().contains('JSON')) {
+          print(
+            'Retrying due to JSON parsing error (attempt ${attempt + 1}/$maxRetries)',
+          );
+          await Future.delayed(Duration(seconds: attempt)); // Progressive delay
+          continue;
+        } else {
+          break; // Don't retry for non-JSON errors or on last attempt
+        }
+      }
     }
+
+    // If all attempts failed, check if it's an API limit error
+    if (lastException.toString().contains('limit') ||
+        lastException.toString().contains('quota') ||
+        lastException.toString().contains('429')) {
+      throw Exception(
+        'AI service limit reached. Please try again later or upgrade your plan.',
+      );
+    }
+
+    // Otherwise throw the original error
+    throw lastException ??
+        Exception('Analysis failed after $maxRetries attempts');
   }
 
   Future<DailyAnalysis> analyzeDailyNutrition({
@@ -599,11 +685,13 @@ class AiService {
 
     String prompt =
         '''
-Analyze this food image and provide nutritional information. ${foodBreakdown != null ? "The user has provided this breakdown: $foodBreakdown. Use this as a guide but verify against the image." : ""}
+You are a professional nutritionist analyzing food images. Analyze this food image and provide nutritional information. ${foodBreakdown != null ? "The user has provided this breakdown: $foodBreakdown. Use this as a guide but verify against the image." : ""}
 
 $goalContext
 
-Return ONLY a valid JSON object with this exact structure:
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any explanation, commentary, or text outside the JSON. The JSON must be properly formatted and complete.
+
+JSON Structure Required:
 {
   "foodName": "String - main name of the meal",
   "items": [
@@ -626,17 +714,21 @@ Return ONLY a valid JSON object with this exact structure:
   "fiber": number,
   "fat": number,
   "comment": "String - positive, encouraging comment about the meal",
-  "mealScore": number, // Score 1-10 based on nutrition balance, user goals, and meal quality
+  "mealScore": number,
   "scoreReasoning": "String - brief explanation of why this score was given"
 }
 
-Important:
+Rules:
+- mealScore must be a number between 1-10 (integers only)
+- All nutrition values must be positive numbers (can be decimals)
 - Provide accurate nutritional values for each individual food item
 - The total nutrition values should be the sum of all individual items
 - Be detailed and precise with portion sizes and nutritional breakdown
 - For calorie estimation: ${_getCalorieGuidance(userGoal)}
 - Meal score (1-10): Consider nutrition balance, fiber content, protein quality, processed food ratio, and alignment with user goals
 - Provide an encouraging comment about the meal choice${LanguageService.getLanguagePrompt(language)}
+
+REMEMBER: Respond with ONLY the JSON object. No additional text before or after.
 ''';
     return prompt;
   }
@@ -670,7 +762,7 @@ Important:
 
     String prompt =
         '''
-Analyze this food based on the name "${foodName}" and estimate nutritional information. ${foodBreakdown != null ? "The user has provided this breakdown: $foodBreakdown. Use this as additional information." : ""}
+Analyze this food based on the name "$foodName" and estimate nutritional information. ${foodBreakdown != null ? "The user has provided this breakdown: $foodBreakdown. Use this as additional information." : ""}
 
 $goalContext
 
@@ -751,25 +843,43 @@ Important:
 
   AiAnalysisResponse _parseAiResponse(String responseText) {
     try {
+      // Clean the response text
+      String cleanedText = responseText.trim();
+
+      // Remove common markdown code block markers
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.substring(7);
+      }
+      if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.substring(3);
+      }
+      if (cleanedText.endsWith('```')) {
+        cleanedText = cleanedText.substring(0, cleanedText.length - 3);
+      }
+
+      cleanedText = cleanedText.trim();
+
       // Extract JSON from the response (sometimes AI adds extra text)
-      final jsonStart = responseText.indexOf('{');
-      final jsonEnd = responseText.lastIndexOf('}');
+      int jsonStart = cleanedText.indexOf('{');
+      int jsonEnd = cleanedText.lastIndexOf('}');
 
       if (jsonStart == -1 || jsonEnd == -1) {
         throw Exception('No valid JSON found in response');
       }
 
-      final jsonString = responseText.substring(jsonStart, jsonEnd + 1);
+      final jsonString = cleanedText.substring(jsonStart, jsonEnd + 1);
 
-      // Parse JSON with error handling
+      // Parse JSON with detailed error handling
       Map<String, dynamic> jsonData;
       try {
         jsonData = jsonDecode(jsonString) as Map<String, dynamic>;
       } catch (e) {
+        print('JSON decode error: $e');
+        print('Attempted to parse: $jsonString');
         throw Exception('Invalid JSON format in AI response: $e');
       }
 
-      // Validate required fields exist
+      // Validate and sanitize required fields
       final requiredFields = [
         'foodName',
         'items',
@@ -779,12 +889,119 @@ Important:
         'fiber',
         'fat',
         'comment',
-        'mealScore',
-        'scoreReasoning',
       ];
+
       for (final field in requiredFields) {
-        if (!jsonData.containsKey(field)) {
-          throw Exception('Missing required field: $field');
+        if (!jsonData.containsKey(field) || jsonData[field] == null) {
+          throw Exception('Missing or null required field: $field');
+        }
+      }
+
+      // Ensure mealScore and scoreReasoning exist, provide defaults if missing
+      if (!jsonData.containsKey('mealScore') || jsonData['mealScore'] == null) {
+        jsonData['mealScore'] = 5;
+      }
+      if (!jsonData.containsKey('scoreReasoning') ||
+          jsonData['scoreReasoning'] == null) {
+        jsonData['scoreReasoning'] =
+            'Nutritional score calculated based on available information.';
+      }
+
+      // Validate numeric fields
+      final numericFields = [
+        'calories',
+        'protein',
+        'carbohydrates',
+        'fiber',
+        'fat',
+        'mealScore',
+      ];
+      for (final field in numericFields) {
+        if (jsonData[field] is String) {
+          try {
+            jsonData[field] = double.parse(jsonData[field] as String);
+          } catch (e) {
+            print('Warning: Could not parse $field as number, using default');
+            jsonData[field] = field == 'mealScore' ? 5.0 : 0.0;
+          }
+        } else if (jsonData[field] is! num) {
+          print('Warning: $field is not a number, using default');
+          jsonData[field] = field == 'mealScore' ? 5.0 : 0.0;
+        }
+      }
+
+      // Validate items array
+      if (jsonData['items'] is! List) {
+        throw Exception('Items field must be an array');
+      }
+
+      final items = jsonData['items'] as List;
+      if (items.isEmpty) {
+        // Create a default item if items is empty
+        jsonData['items'] = [
+          {
+            'name': jsonData['foodName'] ?? 'Unknown Food',
+            'quantity': 1.0,
+            'unit': 'serving',
+            'nutritions': {
+              'calories': jsonData['calories'] ?? 0.0,
+              'protein': jsonData['protein'] ?? 0.0,
+              'carbohydrates': jsonData['carbohydrates'] ?? 0.0,
+              'fiber': jsonData['fiber'] ?? 0.0,
+              'fat': jsonData['fat'] ?? 0.0,
+            },
+          },
+        ];
+      }
+
+      // Validate each item in the items array
+      for (int i = 0; i < items.length; i++) {
+        final item = items[i];
+        if (item is! Map<String, dynamic>) {
+          throw Exception('Item $i is not a valid object');
+        }
+
+        // Ensure required item fields
+        if (!item.containsKey('name') || item['name'] == null) {
+          item['name'] = 'Unknown Food Item ${i + 1}';
+        }
+        if (!item.containsKey('quantity') || item['quantity'] == null) {
+          item['quantity'] = 1.0;
+        }
+        if (!item.containsKey('unit') || item['unit'] == null) {
+          item['unit'] = 'serving';
+        }
+        if (!item.containsKey('nutritions') || item['nutritions'] == null) {
+          item['nutritions'] = {
+            'calories': 0.0,
+            'protein': 0.0,
+            'carbohydrates': 0.0,
+            'fiber': 0.0,
+            'fat': 0.0,
+          };
+        }
+
+        // Validate nutritions object
+        final nutritions = item['nutritions'] as Map<String, dynamic>;
+        final nutritionFields = [
+          'calories',
+          'protein',
+          'carbohydrates',
+          'fiber',
+          'fat',
+        ];
+        for (final field in nutritionFields) {
+          if (!nutritions.containsKey(field) || nutritions[field] == null) {
+            nutritions[field] = 0.0;
+          } else if (nutritions[field] is String) {
+            try {
+              nutritions[field] = double.parse(nutritions[field] as String);
+            } catch (e) {
+              nutritions[field] = 0.0;
+            }
+          } else if (nutritions[field] is! num) {
+            nutritions[field] = 0.0;
+          }
         }
       }
 
@@ -1000,7 +1217,7 @@ USER PROFILE:
 
 DAILY NUTRITION STATS:
 - Total Calories: ${stats.totalCalories} / ${stats.targetCalories}
-- Calorie Balance: ${calorieBalance > 0 ? '+' : ''}${calorieBalance.toStringAsFixed(0)} kcal (${balanceStatus})
+- Calorie Balance: ${calorieBalance > 0 ? '+' : ''}${calorieBalance.toStringAsFixed(0)} kcal ($balanceStatus)
 - Protein: ${stats.totalProtein}g (Target: ${stats.proteinTarget})
 - Carbs: ${stats.totalCarbs}g (Target: ${stats.carbsTarget})
 - Fat: ${stats.totalFat}g (Target: ${stats.fatTarget})
@@ -1040,7 +1257,7 @@ Weaknesses: ${analysis.weaknesses}
 Recommendations: ${analysis.recommendations}
 Activity Integration: ${analysis.activityIntegration}
 
-USER'S NEW QUESTION/COMMENT: ${userMessage}
+USER'S NEW QUESTION/COMMENT: $userMessage
 
 Respond naturally as a supportive nutritionist. Provide helpful, specific advice while maintaining context from the previous analysis. Keep responses concise but informative.${LanguageService.getLanguagePrompt(language)}
 ''';
@@ -1426,8 +1643,9 @@ Respond naturally as a supportive nutritionist. Provide helpful, specific advice
 
   // Helper method to mask API key for logging (show only first 8 and last 4 characters)
   String _maskApiKey(String apiKey) {
-    if (apiKey.length <= 12)
+    if (apiKey.length <= 12) {
       return apiKey.replaceRange(4, apiKey.length - 4, '...');
+    }
     return '${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}';
   }
 

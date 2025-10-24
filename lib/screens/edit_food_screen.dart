@@ -192,7 +192,7 @@ class _EditFoodScreenState extends State<EditFoodScreen> {
             const SizedBox(height: 16),
             ..._foodItemControllers.asMap().entries.map((entry) {
               return _buildFoodItemEditor(entry.key, entry.value);
-            }).toList(),
+            }),
           ],
         ),
       ),

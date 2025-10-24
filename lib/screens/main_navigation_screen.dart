@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/nutrition_provider.dart';
+import '../providers/settings_provider.dart';
+import '../providers/app_lifecycle_provider.dart';
+import '../services/widget_action_service.dart';
 import 'home_screen.dart';
 import 'add_food_screen.dart';
 import 'monthly_stats_screen.dart';
 import 'profile_screen.dart';
 import 'daily_analysis_screen.dart';
+import 'quick_camera_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -17,6 +23,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   DateTime _selectedDate = DateTime.now();
   Key _monthlyStatsKey = UniqueKey();
   Key _homeKey = UniqueKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupAppLifecycleIntegration();
+
+      // Initialize widget action service
+      WidgetActionService().initialize(context);
+    });
+  }
+
+  void _setupAppLifecycleIntegration() {
+    final nutritionProvider = context.read<NutritionProvider>();
+    final settingsProvider = context.read<SettingsProvider>();
+    final appLifecycleProvider = context.read<AppLifecycleProvider>();
+
+    // Setup callback for when nutrition data changes
+    nutritionProvider.setOnDataChanged(() {
+      appLifecycleProvider.updateAppData(
+        entries: nutritionProvider.entries,
+        userProfile: settingsProvider.userProfile,
+        date: _selectedDate,
+      );
+    });
+  }
 
   void _onTabTapped(int index) {
     setState(() {
@@ -38,6 +70,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       _monthlyStatsKey = UniqueKey();
       _homeKey = UniqueKey();
     });
+  }
+
+  void _openQuickCamera() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => QuickCameraScreen(
+          selectedDate: _selectedDate,
+          onSaveSuccess: () {
+            // Refresh home screen after adding food from quick camera
+            setState(() {
+              _homeKey = UniqueKey();
+              _monthlyStatsKey = UniqueKey();
+            });
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -78,7 +127,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           unselectedItemColor: Colors.grey[600],
           selectedFontSize: 12,
           unselectedFontSize: 12,
-          iconSize: 28,
+          iconSize: 24,
           elevation: 0,
           backgroundColor: Colors.transparent,
           items: const [
@@ -106,18 +155,37 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
       floatingActionButton: _currentIndex == 0
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        DailyAnalysisScreen(selectedDate: _selectedDate),
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                FloatingActionButton(
+                  heroTag: "camera",
+                  onPressed: _openQuickCamera,
+                  backgroundColor: Colors.green[600],
+                  tooltip: 'Quick Camera',
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    color: Colors.white,
                   ),
-                );
-              },
-              backgroundColor: Colors.purple[600],
-              child: const Icon(Icons.psychology_rounded, color: Colors.white),
-              tooltip: 'AI Analysis',
+                ),
+                FloatingActionButton(
+                  heroTag: "analysis",
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            DailyAnalysisScreen(selectedDate: _selectedDate),
+                      ),
+                    );
+                  },
+                  backgroundColor: Colors.purple[600],
+                  tooltip: 'AI Analysis',
+                  child: const Icon(
+                    Icons.psychology_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             )
           : null,
     );

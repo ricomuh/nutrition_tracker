@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/nutrition_provider.dart';
 import 'providers/daily_analysis_provider.dart';
+import 'providers/app_lifecycle_provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/main_navigation_screen.dart';
 
@@ -20,6 +22,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => NutritionProvider()),
         ChangeNotifierProvider(create: (_) => DailyAnalysisProvider()),
+        ChangeNotifierProvider(create: (_) => AppLifecycleProvider()),
       ],
       child: MaterialApp(
         title: 'NutriFit AI',
@@ -60,14 +63,29 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    final settingsProvider = context.read<SettingsProvider>();
-    await settingsProvider.loadSettings();
+    try {
+      final settingsProvider = context.read<SettingsProvider>();
+      await settingsProvider.loadSettings();
 
-    if (mounted) {
-      if (settingsProvider.isFirstRun || !settingsProvider.hasUserProfile) {
+      // Initialize app lifecycle provider (notifications, widgets)
+      // Skip for web platform to prevent plugin errors
+      if (!kIsWeb) {
+        final appLifecycleProvider = context.read<AppLifecycleProvider>();
+        await appLifecycleProvider.initialize();
+      }
+
+      if (mounted) {
+        if (settingsProvider.isFirstRun || !settingsProvider.hasUserProfile) {
+          Navigator.of(context).pushReplacementNamed('/onboarding');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
+      }
+    } catch (e) {
+      print('Initialization error: $e');
+      // If there's an error, go to onboarding
+      if (mounted) {
         Navigator.of(context).pushReplacementNamed('/onboarding');
-      } else {
-        Navigator.of(context).pushReplacementNamed('/home');
       }
     }
   }

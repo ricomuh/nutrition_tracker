@@ -8,7 +8,7 @@ class DailyAnalysisProvider with ChangeNotifier {
   final AiService _aiService = AiService();
   final SettingsService _settingsService = SettingsService();
 
-  Map<String, DailyAnalysis> _analyses = {};
+  final Map<String, DailyAnalysis> _analyses = {};
   bool _isLoading = false;
   String? _error;
 

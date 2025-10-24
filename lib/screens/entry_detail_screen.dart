@@ -450,7 +450,7 @@ class EntryDetailScreen extends StatelessWidget {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            ...entry.items.map((item) => _buildFoodItemCard(item)).toList(),
+            ...entry.items.map((item) => _buildFoodItemCard(item)),
           ],
         ),
       ),
